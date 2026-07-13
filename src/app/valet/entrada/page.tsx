@@ -129,20 +129,20 @@ export default function EntradaPage() {
         </div>
         <input value={ubi} onChange={e => setUbi(e.target.value)} className="w-full p-3 text-sm border-2 rounded-xl bg-white/10 border-gray-600 text-white" placeholder="Lugar (opcional)" />
 
-        {/* OPCIONALES - Patente, Modelo, Color, Foto, Daños */}
+        {/* OPCIONALES - Patente, Modelo, Color, Foto, Daños - estilo sector */}
         <div className="bg-gray-800/80 rounded-2xl p-4 border border-gray-700">
           <p className="text-gray-400 text-xs font-semibold mb-2">📋 Opcionales</p>
           <div className="grid grid-cols-3 gap-1.5 mb-2">
-            <input value={pat} onChange={e => setPat(e.target.value.toUpperCase())} className="w-full py-5 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Patente" />
-            <input value={mod} onChange={e => setMod(e.target.value)} className="w-full py-5 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Modelo" />
-            <input value={col} onChange={e => setCol(e.target.value)} className="w-full py-5 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Color" />
+            <input value={pat} onChange={e => setPat(e.target.value.toUpperCase())} className="w-full py-4 px-3 rounded-2xl text-sm font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Patente" />
+            <input value={mod} onChange={e => setMod(e.target.value)} className="w-full py-4 px-3 rounded-2xl text-sm font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Modelo" />
+            <input value={col} onChange={e => setCol(e.target.value)} className="w-full py-4 px-3 rounded-2xl text-sm font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Color" />
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            <button type="button" onClick={() => fotoRef.current?.click()} className="w-full py-5 rounded-2xl font-bold text-base bg-gray-700 text-white hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center gap-2">
-              <span className="text-2xl">📸</span> Foto</button>
+            <button type="button" onClick={() => fotoRef.current?.click()} className="w-full py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 bg-teal-700 text-white hover:bg-teal-600 ring-1 ring-teal-500/50 flex items-center justify-center gap-2">
+              <span className="text-xl">📸</span> Foto</button>
             <input ref={fotoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setFoto(URL.createObjectURL(f)); }} />
-            <button type="button" onClick={() => setDanos(!danos)} className={`w-full py-5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all ${danos ? "bg-red-600 text-white" : "bg-gray-700 text-white hover:bg-gray-600"}`}>
-              <span className="text-2xl">🔧</span> Daños</button>
+            <button type="button" onClick={() => setDanos(!danos)} className={`w-full py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2 ${danos ? "bg-red-600 text-white shadow-lg ring-2 ring-white scale-105" : "bg-gray-800 text-gray-300 border-2 border-gray-700"}`}>
+              <span className="text-xl">🔧</span> Daños</button>
           </div>
           {foto && <img src={foto} className="w-full h-32 object-cover rounded-xl mt-2" alt="foto" />}
           {danos && <textarea className="w-full mt-2 p-3 rounded-xl bg-gray-900 text-white text-sm border border-red-500/30" rows={2} placeholder="Describí el daño..." />}
