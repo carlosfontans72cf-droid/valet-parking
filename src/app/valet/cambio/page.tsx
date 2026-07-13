@@ -59,7 +59,7 @@ export default function CambioPage() {
             <div className="bg-gray-900 rounded-xl p-4 mt-4 space-y-2">
               <p className="text-gray-300">📍 <span className="font-semibold">Ubicación:</span> {(t as any).ubicacion_exacta}</p>
               <p className="text-gray-300">🅿️ <span className="font-semibold">Sector actual:</span> <span style={{ color: sectorActual?.color_hex }} className="font-bold">{sectorActual?.nombre || "—"}</span></p>
-              <p className="text-gray-400">🔑 {(t as any).estado_llave}</p>
+              <p className={`text-lg font-bold ${(t as any).estado_llave==="con_dueno"?"text-red-400 animate-pulse":"text-gray-400"}`}>🔑 {(t as any).estado_llave==="con_dueno"?"⚠️ LLAVE CON EL DUEÑO":(t as any).estado_llave==="colgada"?"Colgada":"En cajón"}</p>
             </div>
             <p className="text-gray-300 text-sm font-semibold mt-4 mb-2">🅿️ Mover a:</p>
             <div className="grid grid-cols-2 gap-2">

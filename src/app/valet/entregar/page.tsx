@@ -76,7 +76,7 @@ export default function EntregarPage() {
             <div className="bg-gray-900 rounded-xl p-4 mt-4 space-y-1">
               <p className="text-white text-lg">📍 {t.ubicacion_exacta||"No especificada"}</p>
               <p className="text-lg" style={{color:t.sc}}>🅿️ {t.sn}</p>
-              <p className="text-gray-300">🔑 {t.estado_llave==="colgada"?"Colgada":t.estado_llave==="cajon"?"En cajón":"Con dueño"}</p>
+              <p className={`text-lg font-bold ${t.estado_llave==="con_dueno"?"text-red-400 animate-pulse":"text-gray-300"}`}>🔑 {t.estado_llave==="con_dueno"?"⚠️ LLAVE CON EL DUEÑO":t.estado_llave==="colgada"?"Colgada":"En cajón"}</p>
               <p className="text-gray-400 text-sm">👤 {t.vn} · 🕐 {new Date(t.hora_entrada).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</p>
             </div>
             {/* RECORRIDO COMPLETO */}
