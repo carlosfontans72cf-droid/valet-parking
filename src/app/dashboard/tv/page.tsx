@@ -41,7 +41,7 @@ export default function TVPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8" style={{ fontFamily: "'Segoe UI',sans-serif" }}>
       <div className="flex items-start justify-between mb-8">
-        <div className="flex items-center gap-6"><div className="text-6xl">🚗</div><div><h1 className="text-5xl font-bold">{nomApp}</h1><p className="text-2xl text-gray-400 mt-2">{hora.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p></div></div>
+        <div className="flex items-center gap-6"><img src="/logo.png" alt="" className="w-16 h-16" /><div><h1 className="text-5xl font-bold">{nomApp}</h1><p className="text-2xl text-gray-400 mt-2">{hora.toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p></div></div>
         <div className="text-right"><p className="text-7xl font-light tabular-nums">{hora.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</p><p className="text-xl text-gray-400">En vivo</p></div>
       </div>
       {evs.length > 0 && (

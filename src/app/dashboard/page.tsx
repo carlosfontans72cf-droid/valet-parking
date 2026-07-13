@@ -36,7 +36,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4" style={{ maxWidth: 640, margin: "0 auto" }}>
       <div className="flex items-center justify-between mb-6">
-        <div><h1 className="text-2xl font-bold">{nomApp}</h1></div>
+        <div className="flex items-center gap-2"><img src="/logo.png" alt="" className="w-8 h-8" /><h1 className="text-2xl font-bold">{nomApp}</h1></div>
         <button onClick={() => window.location.href = "/"} className="bg-gray-800 text-white px-4 py-2 rounded-xl text-sm">Ingresar</button>
       </div>
       {evs.length > 1 && (

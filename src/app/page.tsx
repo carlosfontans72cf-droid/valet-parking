@@ -58,7 +58,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-6"><div className="text-5xl mb-3">🚗</div><h1 className="text-3xl font-bold text-white">Valet Parking</h1></div>
+        <div className="text-center mb-6">
+          <img src="/logo.png" alt="Valet Parking" className="w-24 h-24 mx-auto mb-3" />
+          <h1 className="text-3xl font-bold text-white">Valet Parking</h1>
+        </div>
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 shadow-2xl">
           <div className="flex gap-2 mb-4">
             {[["valet","🔑 Valet","bg-blue-600"],["supervisor","👁️ Admin","bg-green-600"],["dueno","👑 Dueño","bg-purple-600"]].map(([k,l,c]) => (
