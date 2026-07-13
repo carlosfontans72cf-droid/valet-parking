@@ -1,8 +1,9 @@
 "use client";
 export const dynamic = 'force-dynamic';
 import { useState } from "react";
-const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen";
-const q = async (u: string) => { try { const r = await fetch(u, { headers: { apikey: AK, Authorization: `Bearer ${AK}` } }); return await r.json(); } catch { return null; } };
+const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen", BH = { apikey: AK, Authorization: `Bearer ${AK}` };
+const q = async (u: string) => { try { const r = await fetch(u, { headers: BH }); const t = await r.text(); return t && t !== "[]" ? JSON.parse(t) : []; } catch { return []; } };
+const act = async (u: string, m: string, d?: any) => fetch(u, { method: m, headers: { ...BH, "Content-Type": "application/json" }, body: d ? JSON.stringify(d) : undefined });
 
 export default function EntregarPage() {
   const [n, setN] = useState("");
@@ -10,12 +11,12 @@ export default function EntregarPage() {
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const eid = typeof window !== 'undefined' ? localStorage.getItem("eventoActivoId") : null;
-  const vid = typeof window !== 'undefined' ? localStorage.getItem("valetId") : null;
+  const vid = typeof window !== 'undefined' ? localStorage.getItem("valetId") || localStorage.getItem("userId") : null;
 
   const buscar = async () => {
     setErr(""); setT(null);
     if (!n||!eid) { setErr("Falta número o evento"); return; }
-    const d = await q(`${SB}/rest/v1/tickets?select=id,numero_ticket,id_sector,ubicacion_exacta,estado_llave,hora_entrada,id_valet_entrada,id_evento&numero_ticket=eq.${n}&id_evento=eq.${eid}&estado=eq.activo`);
+    const d = await q(`${SB}/rest/v1/tickets?select=id,numero_ticket,id_sector,id_evento,ubicacion_exacta,estado_llave,hora_entrada,id_valet_entrada&numero_ticket=eq.${n}&id_evento=eq.${eid}&estado=eq.activo`);
     if (!Array.isArray(d)||!d.length) { setErr("No encontrado en este evento"); return; }
     const tk = d[0];
     const [sec, val, hist] = await Promise.all([
@@ -24,11 +25,14 @@ export default function EntregarPage() {
       q(`${SB}/rest/v1/historial_completo?select=id,tipo,id_valet,creado_en,detalles&id_ticket=eq.${tk.id}&order=creado_en.asc`),
     ]);
     let he: any[] = [];
-    if (Array.isArray(hist)) {
+    if (Array.isArray(hist) && hist.length) {
       he = await Promise.all(hist.map(async (h:any) => {
         const p = await q(`${SB}/rest/v1/perfiles?select=nombre&id=eq.${h.id_valet}`);
         let det = "";
-        if (h.detalles&&typeof h.detalles==="object"&&(h.detalles as any).sector_anterior) det = `${(h.detalles as any).sector_anterior} → ${(h.detalles as any).sector_nuevo}`;
+        if (h.detalles&&typeof h.detalles==="object") {
+          if ((h.detalles as any).sector_anterior) det = `${(h.detalles as any).sector_anterior} → ${(h.detalles as any).sector_nuevo}`;
+          if ((h.detalles as any).sector && !det) det = (h.detalles as any).sector;
+        }
         return {...h, vn: Array.isArray(p)&&p.length?p[0].nombre:"—", det, icon: h.tipo==="entrada"?"🚗":h.tipo==="cambio_sector"?"🔄":"✅", label: h.tipo==="entrada"?"INGRESÓ":h.tipo==="cambio_sector"?"REUBICÓ":h.tipo==="retiro_entregado"?"ENTREGÓ":h.tipo.toUpperCase()};
       }));
     }
@@ -36,9 +40,11 @@ export default function EntregarPage() {
   };
 
   const ent = async () => {
-    if (!t||!vid) return;
+    if (!t||!vid||!eid) return;
     try {
-      await fetch(`${SB}/rest/v1/tickets?id=eq.${t.id}`, { method:"PATCH", headers:{"Content-Type":"application/json",apikey:AK,Authorization:`Bearer ${AK}`}, body:JSON.stringify({ estado:"completado", hora_salida:new Date().toISOString(), id_valet_salida:vid }) });
+      await act(`${SB}/rest/v1/tickets?id=eq.${t.id}`, "PATCH", { estado:"completado", hora_salida:new Date().toISOString(), id_valet_salida:vid });
+      // Registrar en historial
+      await act(`${SB}/rest/v1/historial_completo`, "POST", { id_ticket: t.id, id_evento: eid, id_valet: vid, tipo: "retiro_entregado", detalles: { sector: t.sn } });
       setOk("✅ Entregado!"); setTimeout(()=>{setT(null);setN("");setOk("");},2000);
     } catch { setErr("Error"); }
   };

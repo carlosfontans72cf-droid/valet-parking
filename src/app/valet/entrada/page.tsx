@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 const SB = "https://hzexxoazyhhvljqiummn.supabase.co/rest/v1/", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen", H = { apikey: AK, Authorization: `Bearer ${AK}` };
 const q = async (u: string) => { try { const r = await fetch(u, { headers: H }); const t = await r.text(); return t && t !== "[]" ? JSON.parse(t) : []; } catch { return []; } };
+const act = async (u: string, m: string, d?: any) => fetch(u, { method: m, headers: { ...H, "Content-Type": "application/json" }, body: d ? JSON.stringify(d) : undefined });
 
 export default function EntradaPage() {
   const [secs, setSecs] = useState<any[]>([]);
@@ -78,9 +79,14 @@ export default function EntradaPage() {
       const patStr = pat.trim() ? pat.toUpperCase().trim() : "T-" + n;
       const idV = await getOrCreateVehiculo(patStr);
       if (!idV) { setErr("Error con vehículo"); setBusy(false); return; }
-      // Actualizar datos del vehículo si se proporcionaron
-      if (mod || col) await fetch(`${SB}vehiculos?id=eq.${idV}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ modelo: mod, color: col }) });
-      await fetch(`${SB}tickets`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ numero_ticket: n, id_evento: evId, id_vehiculo: idV, id_sector: sSel, ubicacion_exacta: ubi || "—", estado_llave: llave, id_valet_entrada: userId, estado: "activo" }) });
+      if (mod || col) await act(`${SB}vehiculos?id=eq.${idV}`, "PATCH", { modelo: mod, color: col });
+      const r = await fetch(`${SB}tickets`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ numero_ticket: n, id_evento: evId, id_vehiculo: idV, id_sector: sSel, ubicacion_exacta: ubi || "—", estado_llave: llave, id_valet_entrada: userId, estado: "activo" }) });
+      const tkt = await r.json();
+      const tktId = Array.isArray(tkt) && tkt.length ? tkt[0].id : tkt?.id;
+      if (tktId) {
+        // Registrar en historial
+        await act(`${SB}historial_completo`, "POST", { id_ticket: tktId, id_evento: evId, id_valet: userId, tipo: "entrada", detalles: { sector: secs.find(s => s.id === sSel)?.nombre || "", llave } });
+      }
       setOk("🎫 #" + n + " registrado!");
       setTimeout(() => { setSSel(""); setUbi(""); setLlave(""); setPat(""); setMod(""); setCol(""); setFoto(""); setDanos(false); setOk(""); setNumT(String(n + 1)); ref.current?.focus(); }, 2000);
     } catch { setErr("Error al registrar"); }
