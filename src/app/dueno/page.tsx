@@ -27,7 +27,7 @@ export default function DuenoPage() {
       const hoy = new Date().toISOString().split("T")[0];
       setTotHoy((await api(`${SB}/rest/v1/tickets?select=id&hora_entrada=gte.${hoy}&id_evento=in.(${evIds})`)).length);
     } else { setTotal(0); setTotHoy(0); }
-    const h = await api(`${SB}/rest/v1/historial_completo?order=creado_en.desc&limit=200`);
+    const h = await api(`${SB}/rest/v1/historial_completo?order=creado_en.desc&limit=300`);
     if (h.length) {
       const enr = await Promise.all(h.map(async (x: any) => {
         const [p, tkt, ev] = await Promise.all([
@@ -35,7 +35,14 @@ export default function DuenoPage() {
           api(`${SB}/rest/v1/tickets?select=numero_ticket&id=eq.${x.id_ticket}`),
           api(`${SB}/rest/v1/eventos?select=nombre&id=eq.${x.id_evento}`),
         ]);
-        return { ...x, vn: p.length ? p[0].nombre : "—", tn: tkt.length ? tkt[0].numero_ticket : "", en: ev.length ? ev[0].nombre : "" };
+        // Extraer detalles de sector
+        let sectorDesde = "", sectorHasta = "";
+        if (x.detalles) {
+          const d = typeof x.detalles === "string" ? JSON.parse(x.detalles) : x.detalles;
+          if (d.sector_nuevo) { sectorHasta = d.sector_nuevo; sectorDesde = d.sector_anterior || ""; }
+          else if (d.sector) sectorHasta = d.sector;
+        }
+        return { ...x, vn: p.length ? p[0].nombre : "—", tn: tkt.length ? tkt[0].numero_ticket : "", en: ev.length ? ev[0].nombre : "", sectorDesde, sectorHasta };
       }));
       setHist(enr);
     }
@@ -90,7 +97,7 @@ export default function DuenoPage() {
         <div className="bg-white rounded-2xl shadow p-3 text-center"><p className="text-2xl font-bold text-purple-600">{hist.length}</p><p className="text-xs text-gray-500">Movs</p></div>
       </div>
       <div className="bg-white rounded-2xl shadow p-4 mb-4">
-        <p className="font-bold mb-3">Nuevo Evento</p>
+        <p className="font-bold mb-3">➕ Nuevo Evento</p>
         <div className="flex gap-2">
           <input value={nuevo} onChange={e => setNuevo(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-xl flex-1" placeholder="Nombre" onKeyDown={e => e.key === "Enter" && crear()} />
           <button onClick={crear} className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold">Crear</button>
@@ -113,18 +120,32 @@ export default function DuenoPage() {
       {/* Toggle */}
       <button onClick={() => setVerRecorrido(!verRecorrido)} className="text-blue-600 text-sm mb-3 font-semibold">{verRecorrido ? "📋 Ver por evento" : "🚗 Ver recorrido de vehículos"}</button>
 
-      {/* RECORRIDO POR VEHÍCULO */}
+      {/* RECORRIDO POR VEHÍCULO - con detalles de sector */}
       {verRecorrido && (
         <div>
           {Object.entries(histByTicket).filter(([k]) => k !== "otros").sort().reverse().slice(0, 20).map(([ticket, items]) => (
             <div key={ticket} className="bg-white rounded-2xl shadow p-3 mb-3">
               <p className="font-bold text-blue-700 mb-2">{ticket} - {items.length} movimientos</p>
               {items.sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime()).map((h: any, i: number) => (
-                <div key={h.id} className="flex items-center gap-2 p-1 text-xs border-l-2 ml-2 pl-2" style={{ borderColor: i === 0 ? "#3498DB" : i === items.length - 1 ? "#2ECC71" : "#E67E22" }}>
-                  <span>{h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : "🔄"}</span>
-                  <span className="text-gray-500 uppercase">{h.tipo === "retiro_entregado" ? "ENTREGÓ" : h.tipo === "cambio_sector" ? "CAMBIO" : h.tipo === "entrada" ? "ENTRADA" : h.tipo}</span>
-                  <span className="text-gray-700 font-medium">{h.vn}</span>
-                  <span className="text-gray-400 ml-auto">{new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</span>
+                <div key={h.id} className="flex items-start gap-2 p-1.5 text-xs border-l-2 ml-2 pl-2 mb-1" style={{ borderColor: i === 0 ? "#3498DB" : i === items.length - 1 ? "#2ECC71" : "#E67E22" }}>
+                  <span className="mt-0.5">{h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : "🔄"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="text-gray-500 uppercase font-semibold">
+                        {h.tipo === "retiro_entregado" ? "ENTREGÓ" : h.tipo === "cambio_sector" ? "CAMBIO" : h.tipo === "entrada" ? "ENTRADA" : h.tipo}
+                      </span>
+                      <span className="text-gray-400">· {h.vn}</span>
+                    </div>
+                    {/* MOSTRAR SECTOR - la parte clave de la ruta */}
+                    {h.sectorHasta && (
+                      <div className="text-gray-600 mt-0.5">
+                        {h.tipo === "entrada" && <>📍 Ingresa a <strong>{h.sectorHasta}</strong></>}
+                        {h.tipo === "cambio_sector" && <>{h.sectorDesde ? <>{h.sectorDesde} </> : ""}→ <strong>{h.sectorHasta}</strong></>}
+                        {h.tipo === "retiro_entregado" && <>✅ Sale de <strong>{h.sectorHasta}</strong></>}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-gray-400 whitespace-nowrap">{new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</span>
                 </div>
               ))}
             </div>
@@ -132,7 +153,7 @@ export default function DuenoPage() {
         </div>
       )}
 
-      {/* POR EVENTO */}
+      {/* POR EVENTO - con detalles de sector */}
       {!verRecorrido && (
         <div>
           {Object.entries(hist.reduce((acc: any, h: any) => { const k = h.en || "General"; if (!acc[k]) acc[k] = []; acc[k].push(h); return acc; }, {})).slice(0, 5).map(([eventName, items]: [string, any]) => (
@@ -144,6 +165,7 @@ export default function DuenoPage() {
                     <span>{h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : h.tipo === "cambio_sector" ? "🔄" : "📍"}</span>
                     {h.tn && <span className="font-bold">#{h.tn}</span>}
                     <span className="text-gray-500 uppercase">{h.tipo === "retiro_entregado" ? "ENTREGÓ" : h.tipo === "cambio_sector" ? "CAMBIO" : h.tipo === "entrada" ? "ENTRADA" : h.tipo}</span>
+                    {h.sectorHasta && <span className="text-gray-400 text-[10px]">→ {h.sectorHasta}</span>}
                     <span className="text-gray-400">· {h.vn}</span>
                     <span className="text-gray-400 ml-auto">{h.creado_en ? new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
                   </div>
