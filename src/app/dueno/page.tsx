@@ -2,8 +2,13 @@
 export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
 
-const api = (path: string) => fetch("/api/db?path=" + encodeURIComponent(path)).then(r => r.text()).then(t => t && t !== "[]" ? JSON.parse(t) : []).catch(() => []);
-const act = (path: string, m: string, d?: any) => fetch("/api/db", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, method: m, data: d }) });
+const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen";
+const api_direct = async (url: string) => {
+  try { const r = await fetch(url, { headers: { apikey: AK, Authorization: `Bearer ${AK}` } }); const t = await r.text(); if (!t || t === "[]") return []; return JSON.parse(t); } catch { return []; }
+};
+const act_direct = async (url: string, method: string, data?: any) => {
+  await fetch(url, { method, headers: { apikey: AK, Authorization: `Bearer ${AK}`, "Content-Type": "application/json" }, body: data ? JSON.stringify(data) : undefined });
+};
 
 export default function DuenoPage() {
   const [evs, setEvs] = useState<any[]>([]);
@@ -18,23 +23,25 @@ export default function DuenoPage() {
   useEffect(() => { cargar(); }, []);
 
   const cargar = async () => {
-    const c = await api("configuracion_app?select=nombre_app&limit=1");
+    const c = await api_direct(`${SB}/rest/v1/configuracion_app?limit=1`);
     if (c.length) setNomApp(c[0].nombre_app || "Valet Parking");
-    const d = await api("eventos?select=id,nombre,vehiculos_totales,fecha_apertura&estado=eq.abierto&order=fecha_apertura");
+    const d = await api_direct(`${SB}/rest/v1/eventos?select=id,nombre,vehiculos_totales,fecha_apertura&estado=eq.abierto&order=fecha_apertura`);
     if (d.length) setEvs(d);
-    const t = await api("tickets?select=id&estado=eq.activo");
+    // Contar solo tickets activos en eventos activos
+    const evIds = d.length ? d.map((e: any) => e.id).join(",") : "";
+    const t = evIds ? await api_direct(`${SB}/rest/v1/tickets?select=id&estado=eq.activo&id_evento=in.(${evIds})`) : [];
     setTotal(Array.isArray(t) ? t.length : 0);
     const hoy = new Date().toISOString().split("T")[0];
-    const th = await api("tickets?select=id&hora_entrada=gte." + hoy);
+    const th = evIds ? await api_direct(`${SB}/rest/v1/tickets?select=id&hora_entrada=gte.${hoy}&id_evento=in.(${evIds})`) : [];
     setTotHoy(Array.isArray(th) ? th.length : 0);
 
-    // Historial via proxy
-    const h = await api("historial_completo?order=creado_en.desc&limit=100");
+    // Historial DIRECTO (no proxy)
+    const h = await api_direct(`${SB}/rest/v1/historial_completo?order=creado_en.desc&limit=100`);
     if (h.length) {
       const enr = await Promise.all(h.slice(0, 100).map(async (x: any) => {
-        const p = await api("perfiles?select=nombre&id=eq." + x.id_valet);
-        const tkt = await api("tickets?select=numero_ticket&id=eq." + x.id_ticket);
-        const ev = await api("eventos?select=nombre&id=eq." + x.id_evento);
+        const p = await api_direct(`${SB}/rest/v1/perfiles?select=nombre&id=eq.${x.id_valet}`);
+        const tkt = await api_direct(`${SB}/rest/v1/tickets?select=numero_ticket&id=eq.${x.id_ticket}`);
+        const ev = await api_direct(`${SB}/rest/v1/eventos?select=nombre&id=eq.${x.id_evento}`);
         return { ...x, vn: p.length ? p[0].nombre : "—", tn: tkt.length ? tkt[0].numero_ticket : "", en: ev.length ? ev[0].nombre : "" };
       }));
       setHist(enr);
@@ -44,22 +51,22 @@ export default function DuenoPage() {
   const crear = async () => {
     if (!nuevo.trim()) return;
     const uid = localStorage.getItem("userId") || "be8e22f7-5afd-426d-a777-0f69a68e1984";
-    await act("eventos", "POST", { nombre: nuevo.trim(), abierto_por: uid });
+    await act_direct(`${SB}/rest/v1/eventos`, "POST", { nombre: nuevo.trim(), abierto_por: uid });
     setNuevo(""); setMsg("Creado"); setTimeout(() => setMsg(""), 2000); cargar();
   };
 
   const cerrarEvento = async (id: string, nom: string) => {
     if (!confirm("Cerrar " + nom + "?")) return;
-    await act("eventos?id=eq." + id, "PATCH", { estado: "cerrado", fecha_cierre: new Date().toISOString() });
+    await act_direct(`${SB}/rest/v1/eventos?id=eq.${id}`, "PATCH", { estado: "cerrado", fecha_cierre: new Date().toISOString() });
     cargar();
   };
 
   const eliminarEvento = async (id: string, nom: string) => {
     if (!confirm("ELIMINAR " + nom + "?") || !confirm("Confirmar?")) return;
-    const tkts = await api("tickets?select=id&id_evento=eq." + id);
-    for (const t of tkts) await act("historial_completo?id_ticket=eq." + t.id, "DELETE");
-    await act("tickets?id_evento=eq." + id, "DELETE");
-    await act("eventos?id=eq." + id, "DELETE");
+    const tkts = await api_direct(`${SB}/rest/v1/tickets?select=id&id_evento=eq.${id}`);
+    for (const t of tkts) await act_direct(`${SB}/rest/v1/historial_completo?id_ticket=eq.${t.id}`, "DELETE");
+    await act_direct(`${SB}/rest/v1/tickets?id_evento=eq.${id}`, "DELETE");
+    await act_direct(`${SB}/rest/v1/eventos?id=eq.${id}`, "DELETE");
     setMsg("Eliminado"); setTimeout(() => setMsg(""), 3000); cargar();
   };
 
@@ -76,11 +83,12 @@ export default function DuenoPage() {
       <div className="flex items-center justify-between mb-6">
         <div><h1 className="text-2xl font-bold">{nomApp}</h1><p className="text-gray-500">{uName}</p></div>
         <div className="flex gap-1">
+          <button onClick={() => window.history.back()} className="bg-gray-200 px-2.5 py-1.5 rounded-xl text-xs">←</button>
           <button onClick={() => window.location.href = "/dashboard"} className="bg-gray-200 px-2.5 py-1.5 rounded-xl text-xs">📊</button>
           <button onClick={() => window.location.href = "/dashboard/tv"} className="bg-gray-800 text-white px-2.5 py-1.5 rounded-xl text-xs">📺</button>
           <button onClick={() => window.location.href = "/valet"} className="bg-blue-600 text-white px-2.5 py-1.5 rounded-xl text-xs">🚗</button>
           <button onClick={() => window.location.href = "/dueno/configuracion"} className="bg-purple-600 text-white px-2.5 py-1.5 rounded-xl text-xs">⚙️</button>
-          <button onClick={cerrarSesion} className="bg-gray-800 text-white px-2.5 py-1.5 rounded-xl text-xs">🚪</button>
+          <button onClick={cerrarSesion} className="bg-gray-800 text-white px-2.5 py-1.5 rounded-xl text-xs">Salir</button>
         </div>
       </div>
       {msg && <div className="bg-blue-100 text-blue-700 p-3 rounded-xl text-sm mb-4">{msg}</div>}
@@ -120,7 +128,6 @@ export default function DuenoPage() {
         <button onClick={() => wp("Resumen: " + total + " activos, " + evs.length + " eventos")} className="bg-green-600 text-white py-4 rounded-2xl font-bold">WhatsApp</button>
       </div>
 
-      {/* HISTORIAL - REESCRITO CON PROXY */}
       <div className="bg-white rounded-2xl shadow p-4">
         <p className="font-bold mb-3">Historial ({hist.length} movimientos)</p>
         <div className="space-y-1.5 max-h-96 overflow-y-auto">
