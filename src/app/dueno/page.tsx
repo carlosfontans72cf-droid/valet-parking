@@ -114,8 +114,15 @@ export default function DuenoPage() {
       ))}
 
       <div className="grid grid-cols-2 gap-2 mt-4 mb-6">
-        <button onClick={exportCSV} className="bg-green-700 text-white py-4 rounded-2xl font-bold active:scale-95">📊 Exportar CSV</button>
-        <button onClick={() => wp("📊 " + nomApp + " - Resumen\n🚗 Activos: " + total + "\n📋 Eventos: " + evs.length + "\n📅 Hoy: " + totHoy)} className="bg-green-600 text-white py-4 rounded-2xl font-bold active:scale-95">💬 WhatsApp</button>
+        <button onClick={exportCSV} className="bg-green-700 text-white py-4 rounded-2xl font-bold shadow active:scale-95">📊 Exportar CSV</button>
+        <button onClick={() => {
+          let texto = "📊 " + nomApp + " - Resumen\n";
+          texto += "🚗 Activos: " + total + "\n📋 Eventos: " + evs.length + "\n📅 Hoy: " + totHoy + "\n\n📜 Historial:\n";
+          hist.slice(0, 15).forEach((h: any) => {
+            texto += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + (h.en ? " (" + h.en + ")" : "") + "\n";
+          });
+          wp(texto);
+        }} className="bg-green-600 text-white py-4 rounded-2xl font-bold shadow active:scale-95">💬 WhatsApp</button>
       </div>
 
       <div className="bg-white rounded-2xl shadow p-4">
