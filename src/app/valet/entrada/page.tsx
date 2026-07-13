@@ -15,8 +15,6 @@ export default function EntradaPage() {
   const [loading, setLoading] = useState(true);
   const [evNom, setEvNom] = useState("");
   const ref = useRef<HTMLInputElement>(null);
-
-  // Obtener userId de cualquier sesión (valet o dueño)
   const userId = typeof window !== 'undefined' ? (localStorage.getItem("valetId") || localStorage.getItem("userId")) : null;
 
   const getEventId = async () => {
@@ -28,6 +26,18 @@ export default function EntradaPage() {
     const d = await q(`${SB}eventos?select=id,nombre&estado=eq.abierto&limit=1`);
     if (d.length) { localStorage.setItem("eventoActivoId", d[0].id); setEvNom(d[0].nombre); setLoading(false); return d[0].id; }
     setLoading(false);
+    return null;
+  };
+
+  const getOrCreateVehiculo = async (patente: string) => {
+    // Buscar si ya existe
+    const exist = await q(`${SB}vehiculos?patente=eq.${encodeURIComponent(patente)}`);
+    if (exist.length) return exist[0].id;
+    // Crear nuevo
+    const r = await fetch(`${SB}vehiculos`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ patente }) });
+    const d = await r.json();
+    if (Array.isArray(d) && d.length) return d[0].id;
+    if (d && d.id) return d.id;
     return null;
   };
 
@@ -52,7 +62,7 @@ export default function EntradaPage() {
     const evId = localStorage.getItem("eventoActivoId");
     setErr(""); setOk("");
     if (!evId) { setErr("No hay evento activo"); return; }
-    if (!userId) { setErr("No hay sesión - iniciá sesión primero"); return; }
+    if (!userId) { setErr("No hay sesión"); return; }
     const n = parseInt(numT);
     if (!n || n < 1) { setErr("Número inválido"); return; }
     if (!sSel) { setErr("Seleccioná sector"); return; }
@@ -61,10 +71,8 @@ export default function EntradaPage() {
     if (ex.length) { setErr("Ticket #" + n + " ya activo"); return; }
     setBusy(true);
     try {
-      const r = await fetch(`${SB}vehiculos`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ patente: "T-" + n }) });
-      const d = await r.json();
-      const idV = Array.isArray(d) && d.length ? d[0].id : null;
-      if (!idV) { setErr("Error al crear vehículo"); setBusy(false); return; }
+      const idV = await getOrCreateVehiculo("T-" + n);
+      if (!idV) { setErr("Error con vehículo"); setBusy(false); return; }
       await fetch(`${SB}tickets`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ numero_ticket: n, id_evento: evId, id_vehiculo: idV, id_sector: sSel, ubicacion_exacta: ubi || "—", estado_llave: llave, id_valet_entrada: userId, estado: "activo" }) });
       setOk("🎫 #" + n + " registrado!");
       setTimeout(() => { setSSel(""); setUbi(""); setLlave(""); setOk(""); setNumT(String(n + 1)); ref.current?.focus(); }, 2000);
