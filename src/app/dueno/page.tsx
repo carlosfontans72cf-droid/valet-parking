@@ -63,6 +63,20 @@ export default function DuenoPage() {
   };
   const cerrarSesion = () => { localStorage.clear(); window.location.href = "/"; };
   const wp = (t: string) => window.open("https://wa.me/?text=" + encodeURIComponent(t), "_blank");
+  const wpVehiculo = (ticket: string, items: any[]) => {
+    const sorted = [...items].sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime());
+    let txt = `🚗 ${ticket}\n`;
+    sorted.forEach((h: any) => {
+      const accion = h.tipo === "entrada" ? "🚗 ENTRADA" : h.tipo === "cambio_sector" ? "🔄 REUBICÓ" : h.tipo === "retiro_entregado" ? "✅ ENTREGÓ" : h.tipo.toUpperCase();
+      txt += `${accion} ${h.vn} ${new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}\n`;
+      if (h.sectorHasta) {
+        if (h.tipo === "entrada") txt += `   📍 Ingresa a ${h.sectorHasta}\n`;
+        else if (h.tipo === "cambio_sector") txt += `   ${h.sectorDesde || "?"} → ${h.sectorHasta}\n`;
+        else if (h.tipo === "retiro_entregado") txt += `   ⬆️ Sale de ${h.sectorHasta}\n`;
+      }
+    });
+    wp(txt);
+  };
   const exportCSV = () => {
     if (!hist.length) return;
     const csv = "Fecha,Hora,Ticket,Accion,Valet,Evento\n" + hist.slice(0, 500).map((h: any) => new Date(h.creado_en).toLocaleDateString() + "," + new Date(h.creado_en).toLocaleTimeString() + "," + h.tn + "," + h.tipo + "," + h.vn + "," + h.en).join("\n");
@@ -166,7 +180,10 @@ export default function DuenoPage() {
                       </span>
                     ))}
                   </div>
-                  <button onClick={() => eliminarVehiculo(ticket, grupo.idTicket)} className="text-red-400 hover:text-red-600 text-lg flex-shrink-0 ml-1" title="Eliminar vehículo">🗑️</button>
+                  <div className="flex gap-1 flex-shrink-0 ml-1">
+                    <button onClick={() => wpVehiculo(ticket, sorted)} className="text-green-500 hover:text-green-700 text-lg" title="Compartir por WhatsApp">💬</button>
+                    <button onClick={() => eliminarVehiculo(ticket, grupo.idTicket)} className="text-red-400 hover:text-red-600 text-lg" title="Eliminar vehículo">🗑️</button>
+                  </div>
                 </div>
                 {sorted.some(h => h.sectorHasta) && (
                   <div className="text-[10px] text-gray-400 mt-1 ml-7">
