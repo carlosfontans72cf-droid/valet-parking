@@ -9,12 +9,18 @@ export default function EntradaPage() {
   const [ubi, setUbi] = useState("");
   const [llave, setLlave] = useState("");
   const [numT, setNumT] = useState("");
+  const [pat, setPat] = useState("");
+  const [mod, setMod] = useState("");
+  const [col, setCol] = useState("");
+  const [foto, setFoto] = useState("");
+  const [danos, setDanos] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [evNom, setEvNom] = useState("");
   const ref = useRef<HTMLInputElement>(null);
+  const fotoRef = useRef<HTMLInputElement>(null);
   const userId = typeof window !== 'undefined' ? (localStorage.getItem("valetId") || localStorage.getItem("userId")) : null;
 
   const getEventId = async () => {
@@ -30,11 +36,9 @@ export default function EntradaPage() {
   };
 
   const getOrCreateVehiculo = async (patente: string) => {
-    // Buscar si ya existe
     const exist = await q(`${SB}vehiculos?patente=eq.${encodeURIComponent(patente)}`);
     if (exist.length) return exist[0].id;
-    // Crear nuevo
-    const r = await fetch(`${SB}vehiculos`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ patente }) });
+    const r = await fetch(`${SB}vehiculos`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ patente, modelo: mod, color: col }) });
     const d = await r.json();
     if (Array.isArray(d) && d.length) return d[0].id;
     if (d && d.id) return d.id;
@@ -71,11 +75,14 @@ export default function EntradaPage() {
     if (ex.length) { setErr("Ticket #" + n + " ya activo"); return; }
     setBusy(true);
     try {
-      const idV = await getOrCreateVehiculo("T-" + n);
+      const patStr = pat.trim() ? pat.toUpperCase().trim() : "T-" + n;
+      const idV = await getOrCreateVehiculo(patStr);
       if (!idV) { setErr("Error con vehículo"); setBusy(false); return; }
+      // Actualizar datos del vehículo si se proporcionaron
+      if (mod || col) await fetch(`${SB}vehiculos?id=eq.${idV}`, { method: "PATCH", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ modelo: mod, color: col }) });
       await fetch(`${SB}tickets`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ numero_ticket: n, id_evento: evId, id_vehiculo: idV, id_sector: sSel, ubicacion_exacta: ubi || "—", estado_llave: llave, id_valet_entrada: userId, estado: "activo" }) });
       setOk("🎫 #" + n + " registrado!");
-      setTimeout(() => { setSSel(""); setUbi(""); setLlave(""); setOk(""); setNumT(String(n + 1)); ref.current?.focus(); }, 2000);
+      setTimeout(() => { setSSel(""); setUbi(""); setLlave(""); setPat(""); setMod(""); setCol(""); setFoto(""); setDanos(false); setOk(""); setNumT(String(n + 1)); ref.current?.focus(); }, 2000);
     } catch { setErr("Error al registrar"); }
     setBusy(false);
   };
@@ -115,6 +122,26 @@ export default function EntradaPage() {
           </div>
         </div>
         <input value={ubi} onChange={e => setUbi(e.target.value)} className="w-full p-3 text-sm border-2 rounded-xl bg-white/10 border-gray-600 text-white" placeholder="Lugar (opcional)" />
+
+        {/* OPCIONALES - Patente, Modelo, Color, Foto, Daños */}
+        <div className="bg-gray-800/80 rounded-2xl p-4 border border-gray-700">
+          <p className="text-gray-400 text-xs font-semibold mb-2">📋 Opcionales</p>
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
+            <input value={pat} onChange={e => setPat(e.target.value.toUpperCase())} className="w-full py-5 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Patente" />
+            <input value={mod} onChange={e => setMod(e.target.value)} className="w-full py-5 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Modelo" />
+            <input value={col} onChange={e => setCol(e.target.value)} className="w-full py-5 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Color" />
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button type="button" onClick={() => fotoRef.current?.click()} className="w-full py-5 rounded-2xl font-bold text-base bg-gray-700 text-white hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center gap-2">
+              <span className="text-2xl">📸</span> Foto</button>
+            <input ref={fotoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setFoto(URL.createObjectURL(f)); }} />
+            <button type="button" onClick={() => setDanos(!danos)} className={`w-full py-5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all ${danos ? "bg-red-600 text-white" : "bg-gray-700 text-white hover:bg-gray-600"}`}>
+              <span className="text-2xl">🔧</span> Daños</button>
+          </div>
+          {foto && <img src={foto} className="w-full h-32 object-cover rounded-xl mt-2" alt="foto" />}
+          {danos && <textarea className="w-full mt-2 p-3 rounded-xl bg-gray-900 text-white text-sm border border-red-500/30" rows={2} placeholder="Describí el daño..." />}
+        </div>
+
         {err && <div className="bg-red-900/50 text-red-300 p-3 rounded-xl text-sm text-center">{err}</div>}
         {ok && <div className="bg-green-900/50 text-green-300 p-3 rounded-xl text-sm text-center">{ok}</div>}
         <button onClick={reg} disabled={busy} className="w-full py-6 rounded-2xl text-white font-bold text-2xl shadow-lg active:scale-95 bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50">{busy ? "⏳" : "✅ REGISTRAR"}</button>
