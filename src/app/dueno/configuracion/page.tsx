@@ -74,6 +74,7 @@ export default function ConfigPage() {
         {v.filter((x: any) => x.rol === "supervisor").map((x: any) => (
           <div key={x.id} className="border rounded-xl p-3 mb-2 flex items-center justify-between">
             <p className="font-semibold">{x.nombre}</p>
+            <p className="text-xs">PIN: {x.pin || "-"}</p>
             <button onClick={async () => { if (!confirm("Eliminar?") || !confirm("Confirmar?")) return; await act("perfiles?id=eq." + x.id, "DELETE"); load(); }} className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-xs">Eliminar</button>
           </div>
         ))}
