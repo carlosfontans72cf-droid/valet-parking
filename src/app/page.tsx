@@ -53,47 +53,47 @@ export default function LoginPage() {
     setBusy(false);
   };
 
-  const iCls = "w-full p-4 text-lg border-2 rounded-xl bg-white/20 border-white/30 text-white placeholder-gray-400 focus:border-yellow-400 focus:outline-none";
+  const iCls = "w-full p-5 text-xl border-2 rounded-2xl bg-white/20 border-white/30 text-white placeholder-gray-400 focus:border-yellow-400 focus:outline-none";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <img src="/logo.png" alt="Valet Parking" className="w-24 h-24 mx-auto mb-3" />
-          <h1 className="text-3xl font-bold text-white">Valet Parking</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-6">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-8">
+          <img src="/logo.png" alt="Valet Parking" className="w-32 h-32 mx-auto mb-4" />
+          <h1 className="text-4xl font-bold text-white tracking-tight">Valet Parking</h1>
         </div>
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 shadow-2xl">
-          <div className="flex gap-2 mb-4">
+        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 shadow-2xl">
+          <div className="flex gap-2 mb-5">
             {[["valet","🔑 Valet","bg-blue-600"],["supervisor","👁️ Admin","bg-green-600"],["dueno","👑 Dueño","bg-purple-600"]].map(([k,l,c]) => (
               <button key={k} onClick={() => { setTab(k); setErr(""); setPin(""); setShowList(false); }}
-                className={`flex-1 py-3 px-2 rounded-xl text-sm font-semibold ${tab===k?`${c} text-white shadow-lg scale-105`:"bg-white/20 text-gray-300"}`}>{l}</button>
+                className={`flex-1 py-4 px-2 rounded-2xl text-base font-semibold ${tab===k?`${c} text-white shadow-lg scale-105`:"bg-white/20 text-gray-300"}`}>{l}</button>
             ))}
           </div>
 
-          <div className="flex gap-2 mb-3">
+          <div className="flex gap-2 mb-4">
             <input type="text" value={nombre} onChange={e=>setNombre(e.target.value)} className={iCls+" flex-1"} placeholder="Nombre" required />
-            <button type="button" onClick={()=>setShowList(!showList)} className="px-4 bg-white/20 text-white rounded-xl text-lg hover:bg-white/30">👤</button>
+            <button type="button" onClick={()=>setShowList(!showList)} className="px-5 bg-white/20 text-white rounded-2xl text-xl hover:bg-white/30">👤</button>
           </div>
-          <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={iCls+" mb-3"} placeholder="Apellido" required />
+          <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={iCls+" mb-4"} placeholder="Apellido" required />
 
           {showList && filteredUsers.length > 0 && (
-            <div className="mb-3 bg-white/5 rounded-xl p-2 max-h-48 overflow-y-auto">
+            <div className="mb-4 bg-white/5 rounded-xl p-2 max-h-52 overflow-y-auto">
               {filteredUsers.map((u: any) => (
                 <button key={u.id} onClick={() => selectUser(u.nombre)}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-white hover:bg-white/10 mb-0.5">
+                  className="w-full text-left px-4 py-3 rounded-xl text-base text-white hover:bg-white/10 mb-0.5">
                   👤 {u.nombre} {u.rol === "dueno" ? "(Dueño)" : u.rol === "supervisor" ? "(Admin)" : "(Valet #" + u.numero_valet + ")"}
                 </button>
               ))}
             </div>
           )}
 
-          <div className="relative mb-3">
-            <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={iCls+" pr-12"} placeholder="PIN" maxLength={6} required />
-            <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">{showPin?"🙈":"👁️"}</button>
+          <div className="relative mb-4">
+            <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={iCls+" pr-14"} placeholder="PIN" maxLength={6} required />
+            <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">{showPin?"🙈":"👁️"}</button>
           </div>
-          {err && <div className="bg-red-500/20 text-red-300 p-3 rounded-xl text-sm text-center mb-3">{err}</div>}
+          {err && <div className="bg-red-500/20 text-red-300 p-4 rounded-2xl text-base text-center mb-4">{err}</div>}
           <form onSubmit={login}>
-            <button type="submit" disabled={busy} className="w-full py-5 rounded-2xl text-white font-bold text-xl bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50 shadow-lg active:scale-95">
+            <button type="submit" disabled={busy} className="w-full py-6 rounded-2xl text-white font-bold text-2xl bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50 shadow-lg active:scale-95">
               {busy ? "⏳" : "🚀 INGRESAR"}
             </button>
           </form>
