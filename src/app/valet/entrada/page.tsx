@@ -133,9 +133,9 @@ export default function EntradaPage() {
         <div className="bg-gray-800/80 rounded-2xl p-4 border border-gray-700">
           <p className="text-gray-400 text-xs font-semibold mb-2">📋 Opcionales</p>
           <div className="grid grid-cols-3 gap-1.5 mb-2">
-            <input value={pat} onChange={e => setPat(e.target.value.toUpperCase())} className="w-full py-4 px-3 rounded-2xl text-sm font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Patente" />
-            <input value={mod} onChange={e => setMod(e.target.value)} className="w-full py-4 px-3 rounded-2xl text-sm font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Modelo" />
-            <input value={col} onChange={e => setCol(e.target.value)} className="w-full py-4 px-3 rounded-2xl text-sm font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Color" />
+            <input value={pat} onChange={e => setPat(e.target.value.toUpperCase())} className="w-full py-6 px-2 rounded-2xl text-lg font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500 uppercase tracking-wider" placeholder="Patente" />
+            <input value={mod} onChange={e => setMod(e.target.value)} className="w-full py-6 px-2 rounded-2xl text-lg font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Modelo" />
+            <input value={col} onChange={e => setCol(e.target.value)} className="w-full py-6 px-2 rounded-2xl text-lg font-bold bg-white/10 border-2 border-gray-600 text-white text-center placeholder-gray-500" placeholder="Color" />
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <button type="button" onClick={() => fotoRef.current?.click()} className="w-full py-4 rounded-2xl text-sm font-bold transition-all active:scale-95 bg-teal-700 text-white hover:bg-teal-600 ring-1 ring-teal-500/50 flex items-center justify-center gap-2">
