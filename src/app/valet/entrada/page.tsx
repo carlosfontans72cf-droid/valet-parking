@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react";
 const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen";
 const q = async (u: string) => { try { const r = await fetch(u, { headers: { apikey: AK, Authorization: `Bearer ${AK}` } }); return await r.json(); } catch { return null; } };
 const H = {"Content-Type":"application/json"};
-const B = "w-full py-5 rounded-2xl font-bold text-base bg-gray-700 text-white hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center gap-2";
 
 export default function EntradaPage() {
   const [secs, setSecs] = useState<any[]>([]);
@@ -16,10 +15,13 @@ export default function EntradaPage() {
   const [pat, setPat] = useState("");
   const [mod, setMod] = useState("");
   const [col, setCol] = useState("");
+  const [foto, setFoto] = useState("");
+  const [danos, setDanos] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
+  const fotoRef = useRef<HTMLInputElement>(null);
   const evId = typeof window !== 'undefined' ? localStorage.getItem("eventoActivoId") : null;
   const vId = typeof window !== 'undefined' ? localStorage.getItem("valetId") : null;
 
@@ -59,7 +61,7 @@ export default function EntradaPage() {
       if (!idV) { setErr("Error al crear vehículo"); setBusy(false); return; }
       await fetch(`${SB}/rest/v1/tickets`, {method:"POST",headers:{...H,apikey:AK,Authorization:`Bearer ${AK}`,Prefer:"return=representation"},body:JSON.stringify({numero_ticket:n,id_evento:evId,id_vehiculo:idV,id_sector:sSel,ubicacion_exacta:ubi||"—",estado_llave:llave,id_valet_entrada:vId,estado:"activo",ticket_cliente_entregado:tCli,ticket_auto_colocado:tAuto})});
       setOk(`🎫 #${n} registrado!`);
-      setTimeout(() => { setSSel("");setUbi("");setLlave("");setTCli(false);setTAuto(false);setPat("");setMod("");setCol("");setOk("");setNumT(String(n+1));ref.current?.focus(); }, 2000);
+      setTimeout(() => { setSSel("");setUbi("");setLlave("");setTCli(false);setTAuto(false);setPat("");setMod("");setCol("");setFoto("");setDanos(false);setOk("");setNumT(String(n+1));ref.current?.focus(); }, 2000);
     } catch { setErr("Error"); }
     setBusy(false);
   };
@@ -87,8 +89,7 @@ export default function EntradaPage() {
             {secs.map((s:any)=>(
               <button key={s.id} onClick={()=>setSSel(s.id)} className={`py-4 px-3 rounded-2xl text-sm font-bold transition-all active:scale-95 ${sSel===s.id?"text-white shadow-lg scale-105 ring-2 ring-white":"border-2 border-gray-700"}`}
                 style={{backgroundColor:sSel===s.id?s.color_hex:s.color_hex+"20",color:sSel===s.id?"#fff":s.color_hex}}>
-                <span className="block font-bold text-base">{s.nombre}</span>
-                <span className="text-xs opacity-80">{s.activos||0}/{s.capacidad}</span>
+                <span className="block font-bold text-base">{s.nombre}</span><span className="text-xs opacity-80">{s.activos||0}/{s.capacidad}</span>
               </button>
             ))}
           </div>
@@ -101,6 +102,8 @@ export default function EntradaPage() {
           <label className="flex items-center gap-2 text-white text-sm cursor-pointer"><input type="checkbox" checked={tCli} onChange={e=>setTCli(e.target.checked)} className="w-5 h-5 accent-blue-500" /> ✅ Ticket cliente</label>
           <label className="flex items-center gap-2 text-white text-sm cursor-pointer"><input type="checkbox" checked={tAuto} onChange={e=>setTAuto(e.target.checked)} className="w-5 h-5 accent-blue-500" /> 🏷️ Ticket colgante</label>
         </div>
+
+        {/* OPCIONALES CON FOTO Y DAÑOS FUNCIONALES */}
         <div className="bg-gray-800/80 rounded-2xl p-4 border border-gray-700">
           <p className="text-gray-400 text-xs font-semibold mb-2">📋 Opcionales</p>
           <div className="grid grid-cols-3 gap-1.5 mb-2">
@@ -109,10 +112,16 @@ export default function EntradaPage() {
             <input value={col} onChange={e=>setCol(e.target.value)} className="w-full py-4 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Color" />
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            <button type="button" className={B}><span className="text-2xl">📸</span> Foto</button>
-            <button type="button" className={B+" bg-red-700 hover:bg-red-600"}><span className="text-2xl">🔧</span> Daños</button>
+            <button type="button" onClick={()=>fotoRef.current?.click()} className="w-full py-5 rounded-2xl font-bold text-base bg-gray-700 text-white hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center gap-2">
+              <span className="text-2xl">📸</span> Foto</button>
+            <input ref={fotoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)setFoto(URL.createObjectURL(f));}} />
+            <button type="button" onClick={()=>setDanos(!danos)} className={`w-full py-5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all ${danos?"bg-red-600 text-white":"bg-gray-700 text-white hover:bg-gray-600"}`}>
+              <span className="text-2xl">🔧</span> Daños</button>
           </div>
+          {foto&&<img src={foto} className="w-full h-32 object-cover rounded-xl mt-2" alt="foto" />}
+          {danos&&<textarea className="w-full mt-2 p-3 rounded-xl bg-gray-900 text-white text-sm border border-red-500/30" rows={2} placeholder="Describí el daño..." />}
         </div>
+
         {err&&<div className="bg-red-900/50 text-red-300 p-3 rounded-xl text-sm text-center">{err}</div>}
         {ok&&<div className="bg-green-900/50 text-green-300 p-3 rounded-xl text-sm text-center">{ok}</div>}
         <button onClick={reg} disabled={busy} className="w-full py-6 rounded-2xl text-white font-bold text-2xl shadow-lg active:scale-95 bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50">{busy?"⏳":"✅ REGISTRAR"}</button>

@@ -28,7 +28,7 @@ export default function ConfigPage() {
     if (Array.isArray(c)&&c.length) setNomApp(c[0].nombre_app);
     const s = await q(`${SB}/rest/v1/sectores?select=*&order=orden`);
     if (Array.isArray(s)) setSecs(s);
-    const v = await q(`${SB}/rest/v1/perfiles?select=*&rol=eq.valet&order=numero_valet`);
+    const v = await q(`${SB}/rest/v1/perfiles?select=*&order=numero_valet`);
     if (Array.isArray(v)) setVals(v);
   };
 
@@ -38,6 +38,12 @@ export default function ConfigPage() {
       await fetch(`${SB}/rest/v1/configuracion_app?id=eq.${c[0].id}`, { method:"PATCH", headers:H, body:JSON.stringify({ nombre_app:nomApp }) });
       setMsg("✅ Guardado"); setTimeout(()=>setMsg(""),2000);
     }
+  };
+
+  const desactivarValet = async (id: string, nom: string) => {
+    if (!confirm(`Desactivar a "${nom}"?`)) return;
+    await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:false }) });
+    cargar(); setMsg(`🗑️ ${nom} desactivado`); setTimeout(()=>setMsg(""),3000);
   };
 
   const guardarSector = async (id: string) => {
@@ -80,11 +86,12 @@ export default function ConfigPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow p-4 mb-4">
-        <h2 className="font-bold text-gray-700 mb-3">👤 Valets ({vals.length})</h2>
+        <h2 className="font-bold text-gray-700 mb-3">👤 Valets ({vals.filter((v:any)=>v.rol==="valet").length})</h2>
         <div className="space-y-2 mb-4">
-          {vals.map((v:any) => (
-            <div key={v.id} className="border border-gray-200 rounded-xl p-3 flex items-center justify-between">
-              <div><p className="font-semibold text-gray-700">{v.nombre} #{v.numero_valet}</p><p className="text-xs text-gray-400">PIN: {v.pin||"—"}</p></div>
+          {vals.filter((v:any)=>v.rol==="valet").map((v:any) => (
+            <div key={v.id} className={`border rounded-xl p-3 flex items-center justify-between ${v.activo===false?"border-red-200 bg-red-50":"border-gray-200"}`}>
+              <div><p className="font-semibold text-gray-700">{v.nombre} #{v.numero_valet}</p><p className="text-xs text-gray-400">PIN: {v.pin||"—"} {v.activo===false?"· 🔴 Inactivo":""}</p></div>
+              {v.activo!==false&&<button onClick={()=>desactivarValet(v.id,v.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-200">🚫 Desactivar</button>}
             </div>
           ))}
         </div>
