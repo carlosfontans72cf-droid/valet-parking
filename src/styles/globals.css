@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* Configuración desde tailwind.config.ts */
+@config "../../tailwind.config.ts";
+
+/* Estilos globales */
+:root {
+  --color-valet-blue: #3498DB;
+  --color-valet-green: #2ECC71;
+  --color-valet-yellow: #F1C40F;
+  --color-valet-orange: #E67E22;
+  --color-valet-brown: #8B4513;
+  --color-valet-red: #E74C3C;
+  --color-valet-purple: #9B59B6;
+  --color-valet-gray: #95A5A6;
+  --color-valet-dark: #2C3E50;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Botones grandes para valet */
+.btn-valet {
+  @apply w-full py-6 px-4 rounded-2xl text-white font-bold text-xl shadow-lg active:scale-95 transition-transform duration-100 border-none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn-valet-sm {
+  @apply py-3 px-3 rounded-xl text-white font-semibold text-sm shadow-md active:scale-95 transition-transform duration-100 border-none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Tarjetas */
+.card-valet {
+  @apply bg-white rounded-2xl shadow-md p-4 border border-gray-100;
+}
+
+/* Inputs grandes para valet */
+.input-valet {
+  @apply w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none bg-white;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
