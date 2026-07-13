@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Configuración desde tailwind.config.ts */
-@config "../../tailwind.config.ts";
+@config "../../tailwind.config.js";
 
 /* Estilos globales */
 :root {
