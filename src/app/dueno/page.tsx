@@ -133,8 +133,8 @@ export default function DuenoPage() {
         </div>
       ))}
       <div className="grid grid-cols-2 gap-2 mt-4 mb-6">
-        <button onClick={exportCSV} className="bg-green-700 text-white py-4 rounded-2xl font-bold shadow active:scale-95">📊 Exportar CSV</button>
-        <button onClick={() => { let t = "📊 " + nomApp + " - Resumen\n🚗 " + total + " activos\n📋 " + evs.length + " eventos\n\n"; hist.slice(0, 20).forEach((h: any) => { t += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + (h.en ? " [" + h.en + "]" : "") + "\n"; }); wp(t); }} className="bg-green-600 text-white py-4 rounded-2xl font-bold shadow active:scale-95">💬 WhatsApp</button>
+        <button onClick={exportCSV} className="bg-gradient-to-br from-green-700 to-green-900 text-white rounded-2xl p-4 text-center shadow-lg active:scale-95"><span className="text-3xl block mb-1">📊</span><span className="font-semibold">Exportar CSV</span></button>
+        <button onClick={() => { let t = "📊 " + nomApp + " - Resumen\n🚗 " + total + " activos\n📋 " + evs.length + " eventos\n\n"; hist.slice(0, 20).forEach((h: any) => { t += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + (h.en ? " [" + h.en + "]" : "") + "\n"; }); wp(t); }} className="bg-gradient-to-br from-green-600 to-green-800 text-white rounded-2xl p-4 text-center shadow-lg active:scale-95"><span className="text-3xl block mb-1">💬</span><span className="font-semibold">Compartir WhatsApp</span></button>
       </div>
       {/* Toggle */}
       <button onClick={() => setVerRecorrido(!verRecorrido)} className="text-blue-600 text-sm mb-3 font-semibold">{verRecorrido ? "📋 Ver por evento" : "🚗 Ver recorrido de vehículos"}</button>
