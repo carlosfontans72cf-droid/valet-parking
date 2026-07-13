@@ -120,36 +120,50 @@ export default function DuenoPage() {
       {/* Toggle */}
       <button onClick={() => setVerRecorrido(!verRecorrido)} className="text-blue-600 text-sm mb-3 font-semibold">{verRecorrido ? "📋 Ver por evento" : "🚗 Ver recorrido de vehículos"}</button>
 
-      {/* RECORRIDO POR VEHÍCULO - con detalles de sector */}
+      {/* RECORRIDO POR VEHÍCULO - TODO EN UNA SOLA LÍNEA */}
       {verRecorrido && (
         <div>
-          {Object.entries(histByTicket).filter(([k]) => k !== "otros").sort().reverse().slice(0, 20).map(([ticket, items]) => (
-            <div key={ticket} className="bg-white rounded-2xl shadow p-3 mb-3">
-              <p className="font-bold text-blue-700 mb-2">{ticket} - {items.length} movimientos</p>
-              {items.sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime()).map((h: any, i: number) => (
-                <div key={h.id} className="flex items-start gap-2 p-1.5 text-xs border-l-2 ml-2 pl-2 mb-1" style={{ borderColor: i === 0 ? "#3498DB" : i === items.length - 1 ? "#2ECC71" : "#E67E22" }}>
-                  <span className="mt-0.5">{h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : "🔄"}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-1">
-                      <span className="text-gray-500 uppercase font-semibold">
-                        {h.tipo === "retiro_entregado" ? "ENTREGÓ" : h.tipo === "cambio_sector" ? "CAMBIO" : h.tipo === "entrada" ? "ENTRADA" : h.tipo}
+          {Object.entries(histByTicket).filter(([k]) => k !== "otros").sort().reverse().slice(0, 30).map(([ticket, items]) => {
+            const sorted = items.sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime());
+            const label = (h: any) => {
+              if (h.tipo === "entrada") return "ENTRADA";
+              if (h.tipo === "cambio_sector") return "REUBICÓ";
+              if (h.tipo === "retiro_entregado") return "ENTREGÓ";
+              return h.tipo.toUpperCase();
+            };
+            const icon = (h: any) => h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : "🔄";
+            return (
+              <div key={ticket} className="bg-white rounded-2xl shadow p-3 mb-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-lg font-bold text-blue-700 flex-shrink-0">{ticket}</span>
+                  <div className="flex-1 flex flex-wrap items-center gap-1 text-xs leading-relaxed">
+                    {sorted.map((h: any, i: number) => (
+                      <span key={h.id} className="inline-flex items-center gap-0.5">
+                        {i > 0 && <span className="text-gray-300 mx-0.5">→</span>}
+                        <span>{icon(h)}</span>
+                        <span className="font-semibold text-gray-600">{label(h)}</span>
+                        <span className="text-gray-800">{h.vn}</span>
+                        <span className="text-gray-400 text-[10px]">{new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</span>
                       </span>
-                      <span className="text-gray-400">· {h.vn}</span>
-                    </div>
-                    {/* MOSTRAR SECTOR - la parte clave de la ruta */}
-                    {h.sectorHasta && (
-                      <div className="text-gray-600 mt-0.5">
-                        {h.tipo === "entrada" && <>📍 Ingresa a <strong>{h.sectorHasta}</strong></>}
-                        {h.tipo === "cambio_sector" && <>{h.sectorDesde ? <>{h.sectorDesde} </> : ""}→ <strong>{h.sectorHasta}</strong></>}
-                        {h.tipo === "retiro_entregado" && <>✅ Sale de <strong>{h.sectorHasta}</strong></>}
-                      </div>
-                    )}
+                    ))}
                   </div>
-                  <span className="text-gray-400 whitespace-nowrap">{new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</span>
                 </div>
-              ))}
-            </div>
-          ))}
+                {/* Detalles extra opcional: sectores */}
+                {sorted.some(h => h.sectorHasta) && (
+                  <div className="text-[10px] text-gray-400 mt-1 ml-7">
+                    {sorted.filter(h => h.sectorHasta).map((h: any, i: number) => (
+                      <span key={h.id}>
+                        {i > 0 && <span className="mx-1">|</span>}
+                        {h.tipo === "entrada" && <>📍 {h.sectorHasta}</>}
+                        {h.tipo === "cambio_sector" && <>{h.sectorDesde || "?"} → {h.sectorHasta}</>}
+                        {h.tipo === "retiro_entregado" && <>⬆️ {h.sectorHasta}</>}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
