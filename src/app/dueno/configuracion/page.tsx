@@ -19,6 +19,9 @@ export default function ConfigPage() {
   const [nVNom, setNVNom] = useState("");
   const [nVPin, setNVPin] = useState("");
   const [nVNum, setNVNum] = useState("");
+  const [aNom, setANom] = useState("");
+  const [aPin, setAPin] = useState("");
+  const [aNum, setANum] = useState("");
   const [msg, setMsg] = useState("");
 
   useEffect(() => { cargar(); }, []);
@@ -49,26 +52,12 @@ export default function ConfigPage() {
       await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:true }) });
       setMsg("✅ " + nom + " reactivado"); setTimeout(()=>setMsg(""),3000);
     } else if (accion === "eliminar") {
-      if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE a " + nom + "?")) return;
-      if (!confirm("Confirmación final: eliminar a " + nom + " del sistema?")) return;
+      if (!confirm("⚠️ ELIMINAR a " + nom + "?")) return;
+      if (!confirm("Confirmación final: eliminar a " + nom + "?")) return;
       await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
       setMsg("🗑️ " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000);
     }
     cargar();
-  };
-
-  const eliminarSectorPerm = async (id: string, nom: string) => {
-    if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE sector " + nom + "?")) return;
-    if (!confirm("Confirmación final: eliminar sector " + nom + "?")) return;
-    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
-    setMsg("🗑️ Sector " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000);
-    cargar();
-  };
-
-  const toggleSector = async (id: string, nom: string, activo: boolean) => {
-    if (!confirm((activo?"Desactivar":"Reactivar") + " sector " + nom + "?")) return;
-    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:!activo }) });
-    cargar(); setMsg((activo?"🚫":"✅") + " Sector " + (activo?"desactivado":"reactivado")); setTimeout(()=>setMsg(""),3000);
   };
 
   const guardarSector = async (id: string) => {
@@ -82,10 +71,29 @@ export default function ConfigPage() {
     setNSec(""); cargar(); setMsg("✅ Sector agregado"); setTimeout(()=>setMsg(""),2000);
   };
 
+  const toggleSector = async (id: string, nom: string, activo: boolean) => {
+    if (!confirm((activo?"Desactivar":"Reactivar") + " sector " + nom + "?")) return;
+    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:!activo }) });
+    cargar(); setMsg((activo?"🚫":"✅") + " Sector " + (activo?"desactivado":"reactivado")); setTimeout(()=>setMsg(""),3000);
+  };
+
+  const eliminarSectorPerm = async (id: string, nom: string) => {
+    if (!confirm("⚠️ ELIMINAR sector " + nom + "?")) return;
+    if (!confirm("Confirmación final: eliminar sector " + nom + "?")) return;
+    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+    setMsg("🗑️ Sector " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000); cargar();
+  };
+
   const agregarValet = async () => {
     if (!nVNom.trim()||!nVPin.trim()||!nVNum.trim()) return;
     await fetch(`${SB}/rest/v1/perfiles`, { method:"POST", headers:{...H,Prefer:"return=representation"}, body:JSON.stringify({ nombre:nVNom.trim(), numero_valet:parseInt(nVNum), pin:nVPin, rol:"valet" }) });
     setNVNom(""); setNVPin(""); setNVNum(""); cargar(); setMsg("✅ Valet creado"); setTimeout(()=>setMsg(""),3000);
+  };
+
+  const agregarAdmin = async () => {
+    if (!aNom.trim()||!aPin.trim()) return;
+    await fetch(`${SB}/rest/v1/perfiles`, { method:"POST", headers:{...H,Prefer:"return=representation"}, body:JSON.stringify({ nombre:aNom.trim(), numero_valet:parseInt(aNum)||0, pin:aPin, rol:"supervisor", activo:true }) });
+    setANom(""); setAPin(""); setANum(""); cargar(); setMsg("✅ Admin creado"); setTimeout(()=>setMsg(""),3000);
   };
 
   return (
@@ -118,14 +126,37 @@ export default function ConfigPage() {
             </div>
           ))}
         </div>
-        <div className="p-4 bg-gray-100 rounded-xl">
+        <div className="p-4 bg-gray-100 rounded-xl mb-3">
           <p className="font-semibold text-gray-600 text-sm mb-2">➕ Agregar valet</p>
           <div className="grid grid-cols-3 gap-2 mb-2">
             <input value={nVNom} onChange={e=>setNVNom(e.target.value)} className="p-3 border-2 border-gray-200 rounded-xl text-sm" placeholder="Nombre" />
             <input type="number" value={nVNum} onChange={e=>setNVNum(e.target.value)} className="p-3 border-2 border-gray-200 rounded-xl text-sm" placeholder="N°" />
             <input value={nVPin} onChange={e=>setNVPin(e.target.value)} className="p-3 border-2 border-gray-200 rounded-xl text-sm" placeholder="PIN" maxLength={6} />
           </div>
-          <button onClick={agregarValet} disabled={!nVNom.trim()||!nVPin.trim()||!nVNum.trim()} className="bg-blue-600 text-white w-full py-3 rounded-xl font-semibold disabled:opacity-50">➕ Agregar</button>
+          <button onClick={agregarValet} disabled={!nVNom.trim()||!nVPin.trim()||!nVNum.trim()} className="bg-blue-600 text-white w-full py-3 rounded-xl font-semibold disabled:opacity-50">➕ Agregar Valet</button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow p-4 mb-4">
+        <h2 className="font-bold text-gray-700 mb-3">👑 Admins ({vals.filter((v:any)=>v.rol==="supervisor").length})</h2>
+        <div className="space-y-2 mb-4">
+          {vals.filter((v:any)=>v.rol==="supervisor").map((v:any) => (
+            <div key={v.id} className="border border-gray-200 rounded-xl p-3 flex items-center justify-between">
+              <div><p className="font-semibold text-gray-700">{v.nombre}</p><p className="text-xs text-gray-400">PIN: {v.pin||"—"}</p></div>
+              <div className="flex gap-1">
+                <button onClick={()=>accionValet(v.id,v.nombre,"eliminar")} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🗑️</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="p-4 bg-gray-100 rounded-xl">
+          <p className="font-semibold text-gray-600 text-sm mb-2">➕ Agregar Admin</p>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <input value={aNom} onChange={e=>setANom(e.target.value)} className="p-3 border-2 border-gray-200 rounded-xl text-sm" placeholder="Nombre completo" />
+            <input type="number" value={aNum} onChange={e=>setANum(e.target.value)} className="p-3 border-2 border-gray-200 rounded-xl text-sm" placeholder="N°" />
+            <input value={aPin} onChange={e=>setAPin(e.target.value)} className="p-3 border-2 border-gray-200 rounded-xl text-sm" placeholder="PIN" maxLength={6} />
+          </div>
+          <button onClick={agregarAdmin} disabled={!aNom.trim()||!aPin.trim()} className="bg-green-600 text-white w-full py-3 rounded-xl font-semibold disabled:opacity-50">➕ Agregar Admin</button>
         </div>
       </div>
 
@@ -143,7 +174,7 @@ export default function ConfigPage() {
                     <input type="number" value={eOrd} onChange={e=>setEOrd(parseInt(e.target.value))} className="p-2 border rounded-lg text-sm" />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={()=>guardarSector(s.id)} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex-1">💾 Guardar</button>
+                    <button onClick={()=>guardarSector(s.id)} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex-1">💾</button>
                     <button onClick={()=>setEdS("")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm">Cancelar</button>
                   </div>
                 </div>

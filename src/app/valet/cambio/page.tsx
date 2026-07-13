@@ -10,8 +10,8 @@ export default function CambioPage() {
   const [ns, setNs] = useState("");
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
-
   const eventoId = typeof window !== 'undefined' ? localStorage.getItem("eventoActivoId") : null;
+  const valetId = typeof window !== 'undefined' ? localStorage.getItem("valetId") : null;
 
   useEffect(() => {
     q(`${SB}/rest/v1/sectores?select=id,nombre,color_hex&activo=eq.true&order=orden`).then(d => { if (Array.isArray(d)) setS(d); });
@@ -22,18 +22,24 @@ export default function CambioPage() {
     if (!n||!eventoId) { setErr("Falta número o evento"); return; }
     const d = await q(`${SB}/rest/v1/tickets?select=id,numero_ticket,id_sector,ubicacion_exacta,estado_llave,hora_entrada,id_evento&numero_ticket=eq.${n}&id_evento=eq.${eventoId}&estado=eq.activo`);
     if (!Array.isArray(d)||!d.length) { setErr("No encontrado en este evento"); return; }
-    setT(d[0]);
+    // Traer historial también
+    const hist = await q(`${SB}/rest/v1/historial_completo?select=id,tipo,id_valet,creado_en,detalles&id_ticket=eq.${d[0].id}&order=creado_en.asc`);
+    setT({...d[0], hist: Array.isArray(hist)?hist:[]});
   };
 
   const cambiar = async () => {
-    if (!t||!ns) return;
+    if (!t||!ns||!valetId) return;
     try {
+      const sectorNuevo = s.find(x => x.id === ns);
+      const sectorActual = s.find(x => x.id === t.id_sector);
       await fetch(`${SB}/rest/v1/tickets?id=eq.${t.id}`, { method:"PATCH", headers:{"Content-Type":"application/json",apikey:AK,Authorization:`Bearer ${AK}`}, body:JSON.stringify({ id_sector:ns }) });
+      // Registrar en historial
+      await fetch(`${SB}/rest/v1/historial_completo`, { method:"POST", headers:{"Content-Type":"application/json",apikey:AK,Authorization:`Bearer ${AK}`}, body:JSON.stringify({ id_ticket:t.id, id_evento:t.id_evento, id_valet:valetId, tipo:"cambio_sector", detalles:{ sector_anterior:sectorActual?.nombre||"", sector_nuevo:sectorNuevo?.nombre||"" } }) });
       setOk("✅ Cambiado!"); setTimeout(()=>{setT(null);setN("");setNs("");setOk("");},1500);
     } catch { setErr("Error"); }
   };
 
-  const sectorActual = s.find((x:any) => x.id === t?.id_sector);
+  const sa = s.find((x:any) => x.id === t?.id_sector);
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 pb-8">
@@ -50,9 +56,18 @@ export default function CambioPage() {
             <p className="text-white text-4xl font-bold text-center">🎫 #{String(t.numero_ticket).padStart(3,"0")}</p>
             <div className="bg-gray-900 rounded-xl p-3 mt-3 space-y-1 text-sm">
               <p className="text-white">📍 {t.ubicacion_exacta}</p>
-              <p style={{color:sectorActual?.color_hex}} className="font-bold">🅿️ {sectorActual?.nombre||"—"}</p>
-              <p className={`font-bold ${t.estado_llave==="con_dueno"?"text-red-400 animate-pulse":"text-gray-400"}`}>🔑 {t.estado_llave==="con_dueno"?"⚠️ LLAVE CON EL DUEÑO":t.estado_llave==="colgada"?"Colgada":"En cajón"}</p>
+              <p style={{color:sa?.color_hex}} className="font-bold">🅿️ {sa?.nombre||"—"}</p>
+              <p className={`font-bold ${t.estado_llave==="con_dueno"?"text-red-400 animate-pulse":"text-gray-400"}`}>🔑 {t.estado_llave==="con_dueno"?"⚠️ LLAVE CON DUEÑO":t.estado_llave==="colgada"?"Colgada":"En cajón"}</p>
             </div>
+            {t.hist&&t.hist.length>0&&(
+              <div className="mt-2"><p className="text-gray-500 text-xs font-semibold mb-1">📋 Historial:</p>
+              {t.hist.map((h:any,i:number)=>(
+                <div key={i} className="text-xs text-gray-400 flex gap-1">
+                  <span>{h.tipo==="entrada"?"🚗":"🔄"}</span>
+                  <span>{h.tipo==="entrada"?"Entrada":"Cambio"}</span>
+                </div>
+              ))}</div>
+            )}
             <p className="text-gray-300 text-sm font-semibold mt-3 mb-2">🅿️ Mover a:</p>
             <div className="grid grid-cols-2 gap-1.5">
               {s.filter((x:any) => x.id!==t.id_sector).map((x:any) => (
