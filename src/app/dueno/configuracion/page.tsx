@@ -31,6 +31,7 @@ export default function ConfigPage() {
   useEffect(() => { load(); }, []);
 
   const m = (t: string) => { setMsg(t); setTimeout(() => setMsg(""), 2000); };
+  const wp = (t: string) => window.open("https://wa.me/?text=" + encodeURIComponent(t), "_blank");
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" style={{ maxWidth: 640, margin: "0 auto" }}>
@@ -47,7 +48,10 @@ export default function ConfigPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow p-4 mb-4">
-        <p className="font-bold mb-3">Valets ({v.filter((x: any) => x.rol === "valet").length})</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-bold">Valets ({v.filter((x: any) => x.rol === "valet").length})</p>
+          <button onClick={() => { let t = "🔑 VALETS\n"; v.filter((x: any) => x.rol === "valet").forEach((x: any) => { t += `${x.nombre} #${x.numero_valet} - PIN: ${x.pin}${x.activo === false ? " (INACTIVO)" : ""}\n`; }); wp(t); }} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-xl text-sm font-semibold">💬 Compartir</button>
+        </div>
         {v.filter((x: any) => x.rol === "valet").map((x: any) => (
           <div key={x.id} className="border rounded-xl p-3 mb-2 flex items-center justify-between">
             <div><p className="font-semibold">{x.nombre} #{x.numero_valet}</p><p className="text-xs">{x.pin || ""} {x.activo === false ? "(Inactivo)" : ""}</p></div>
@@ -70,7 +74,10 @@ export default function ConfigPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow p-4 mb-4">
-        <p className="font-bold mb-3">Admins ({v.filter((x: any) => x.rol === "supervisor").length})</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-bold">Admins ({v.filter((x: any) => x.rol === "supervisor").length})</p>
+          <button onClick={() => { let t = "👑 ADMINS\n"; v.filter((x: any) => x.rol === "supervisor").forEach((x: any) => { t += `${x.nombre} - PIN: ${x.pin || "-"}\n`; }); wp(t); }} className="bg-green-100 text-green-700 px-3 py-1.5 rounded-xl text-sm font-semibold">💬 Compartir</button>
+        </div>
         {v.filter((x: any) => x.rol === "supervisor").map((x: any) => (
           <div key={x.id} className="border rounded-xl p-3 mb-2 flex items-center justify-between">
             <p className="font-semibold">{x.nombre}</p>
