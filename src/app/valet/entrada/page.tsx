@@ -15,9 +15,10 @@ export default function EntradaPage() {
   const [loading, setLoading] = useState(true);
   const [evNom, setEvNom] = useState("");
   const ref = useRef<HTMLInputElement>(null);
-  const vId = typeof window !== 'undefined' ? localStorage.getItem("valetId") : null;
 
-  // Get event - try localStorage first, then API
+  // Obtener userId de cualquier sesión (valet o dueño)
+  const userId = typeof window !== 'undefined' ? (localStorage.getItem("valetId") || localStorage.getItem("userId")) : null;
+
   const getEventId = async () => {
     const stored = localStorage.getItem("eventoActivoId");
     if (stored) {
@@ -34,7 +35,6 @@ export default function EntradaPage() {
     (async () => {
       const evId = await getEventId();
       if (!evId) return;
-      // Load sectors
       const d = await q(`${SB}sectores?select=id,nombre,capacidad,color_hex&activo=eq.true&order=orden`);
       if (d.length) {
         const w = await Promise.all(d.map(async (s: any) => {
@@ -43,7 +43,6 @@ export default function EntradaPage() {
         }));
         setSecs(w);
       }
-      // Next ticket number
       const t = await q(`${SB}tickets?select=numero_ticket&id_evento=eq.${evId}&order=numero_ticket.desc&limit=1`);
       setNumT(String((t.length ? t[0].numero_ticket : 0) + 1));
     })();
@@ -53,11 +52,11 @@ export default function EntradaPage() {
     const evId = localStorage.getItem("eventoActivoId");
     setErr(""); setOk("");
     if (!evId) { setErr("No hay evento activo"); return; }
+    if (!userId) { setErr("No hay sesión - iniciá sesión primero"); return; }
     const n = parseInt(numT);
     if (!n || n < 1) { setErr("Número inválido"); return; }
     if (!sSel) { setErr("Seleccioná sector"); return; }
     if (!llave) { setErr("Seleccioná llave"); return; }
-    if (!vId) { setErr("No hay sesión"); return; }
     const ex = await q(`${SB}tickets?select=id&numero_ticket=eq.${n}&id_evento=eq.${evId}&estado=eq.activo`);
     if (ex.length) { setErr("Ticket #" + n + " ya activo"); return; }
     setBusy(true);
@@ -65,16 +64,15 @@ export default function EntradaPage() {
       const r = await fetch(`${SB}vehiculos`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ patente: "T-" + n }) });
       const d = await r.json();
       const idV = Array.isArray(d) && d.length ? d[0].id : null;
-      if (!idV) { setErr("Error"); setBusy(false); return; }
-      await fetch(`${SB}tickets`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ numero_ticket: n, id_evento: evId, id_vehiculo: idV, id_sector: sSel, ubicacion_exacta: ubi || "—", estado_llave: llave, id_valet_entrada: vId, estado: "activo" }) });
+      if (!idV) { setErr("Error al crear vehículo"); setBusy(false); return; }
+      await fetch(`${SB}tickets`, { method: "POST", headers: { ...H, "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ numero_ticket: n, id_evento: evId, id_vehiculo: idV, id_sector: sSel, ubicacion_exacta: ubi || "—", estado_llave: llave, id_valet_entrada: userId, estado: "activo" }) });
       setOk("🎫 #" + n + " registrado!");
       setTimeout(() => { setSSel(""); setUbi(""); setLlave(""); setOk(""); setNumT(String(n + 1)); ref.current?.focus(); }, 2000);
-    } catch { setErr("Error"); }
+    } catch { setErr("Error al registrar"); }
     setBusy(false);
   };
 
   if (loading) return <div className="min-h-screen bg-gray-900 p-4 flex items-center justify-center"><p className="text-white text-xl">Cargando...</p></div>;
-
   const evId = typeof window !== 'undefined' ? localStorage.getItem("eventoActivoId") : null;
 
   return (
