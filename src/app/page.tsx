@@ -12,29 +12,35 @@ export default function LoginPage() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Limpiar campos al cargar
+  // Forzar limpieza completa al cargar la página
   useEffect(() => {
+    localStorage.clear();
     setNombre("");
     setApellido("");
     setPin("");
-    localStorage.removeItem("token");
-    localStorage.removeItem("valetId");
+    // Limpiar cualquier autofill del navegador
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('input');
+      inputs.forEach((inp: any) => { inp.value = ''; });
+    }, 100);
   }, []);
 
   const login = async (e: any) => {
     e.preventDefault();
     setErr(""); setBusy(true);
     try {
+      const nomCompleto = nombre.trim() + " " + apellido.trim();
+      if (!nombre.trim() || !apellido.trim() || !pin) { setErr("Completá todos los datos"); setBusy(false); return; }
+      
       if (tab === "valet") {
-        const d = await q(`${SB}/rest/v1/perfiles?select=id,nombre,numero_valet&nombre=eq.${encodeURIComponent(nombre.trim()+" "+apellido.trim())}&pin=eq.${pin}&rol=eq.valet&activo=eq.true`);
+        const d = await q(`${SB}/rest/v1/perfiles?select=id,nombre,numero_valet&nombre=eq.${encodeURIComponent(nomCompleto)}&pin=eq.${pin}&rol=eq.valet&activo=eq.true`);
         if (!Array.isArray(d) || !d.length) { setErr("Nombre, apellido o PIN incorrecto"); setBusy(false); return; }
         localStorage.setItem("valetId", d[0].id);
         localStorage.setItem("valetNombre", d[0].nombre);
         localStorage.setItem("valetNumero", String(d[0].numero_valet));
         window.location.href = "/valet"; return;
       }
-      const nomCompleto = `${nombre.trim()} ${apellido.trim()}`;
-      if (!nombre.trim() || !apellido.trim() || !pin) { setErr("Completá todos los datos"); setBusy(false); return; }
+      
       const d = await q(`${SB}/rest/v1/perfiles?select=id,nombre,rol&nombre=eq.${encodeURIComponent(nomCompleto)}&pin=eq.${pin}&activo=eq.true`);
       if (!Array.isArray(d) || !d.length) { setErr("Nombre, apellido o PIN incorrecto"); setBusy(false); return; }
       localStorage.setItem("token", "ok");
@@ -57,16 +63,16 @@ export default function LoginPage() {
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-2xl">
           <div className="flex gap-2 mb-4">
             {["valet","dueno"].map(r => (
-              <button key={r} onClick={() => { setTab(r); setErr(""); setPin(""); }} className={`flex-1 py-3 px-2 rounded-xl text-sm font-semibold ${tab===r?(r==="valet"?"bg-blue-600":"bg-purple-600")+" text-white shadow-lg":"bg-white/20 text-gray-300"}`}>
+              <button key={r} onClick={() => { setTab(r); setErr(""); setPin(""); setNombre(""); setApellido(""); }} className={`flex-1 py-3 px-2 rounded-xl text-sm font-semibold ${tab===r?(r==="valet"?"bg-blue-600":"bg-purple-600")+" text-white shadow-lg":"bg-white/20 text-gray-300"}`}>
                 {r==="valet"?"🔑 Valet":"👑 Admin"}
               </button>
             ))}
           </div>
-          <form onSubmit={login} className="space-y-4">
-            <input type="text" value={nombre} onChange={e=>setNombre(e.target.value)} className={i} placeholder="Nombre" required autoFocus />
-            <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={i} placeholder="Apellido" required />
+          <form onSubmit={login} className="space-y-4" autoComplete="off">
+            <input type="text" value={nombre} onChange={e=>setNombre(e.target.value)} className={i} placeholder="Nombre" required autoFocus autoComplete="off" />
+            <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={i} placeholder="Apellido" required autoComplete="off" />
             <div className="relative">
-              <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={i+" pr-12"} placeholder="PIN" maxLength={6} required />
+              <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={i+" pr-12"} placeholder="PIN" maxLength={6} required autoComplete="new-password" />
               <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">{showPin?"🙈":"👁️"}</button>
             </div>
             {err && <div className="bg-red-500/20 text-red-300 p-3 rounded-xl text-sm text-center">{err}</div>}
