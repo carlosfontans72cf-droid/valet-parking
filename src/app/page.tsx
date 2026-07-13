@@ -71,7 +71,7 @@ export default function LoginPage() {
         </div>
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 shadow-2xl">
           <div className="flex gap-2 mb-4">
-            {[["valet","🔑 Valet","bg-blue-600"],["dueno","👑 Dueño","bg-purple-600"]].map(([key,label,color]) => (
+            {[["valet","🔑 Valet","bg-blue-600"],["supervisor","👁️ Admin","bg-green-600"],["dueno","👑 Dueño","bg-purple-600"]].map(([key,label,color]) => (
               <button key={key} onClick={() => { setTab(key); setErr(""); setPin(""); setShowLista(false); }}
                 className={`flex-1 py-3 px-2 rounded-xl text-sm font-semibold transition-all ${tab===key?`${color} text-white shadow-lg scale-105`:"bg-white/20 text-gray-300 hover:bg-white/30"}`}>
                 {label}

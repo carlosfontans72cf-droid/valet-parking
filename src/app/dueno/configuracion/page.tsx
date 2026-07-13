@@ -51,10 +51,24 @@ export default function ConfigPage() {
     } else if (accion === "eliminar") {
       if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE a " + nom + "?")) return;
       if (!confirm("Confirmación final: eliminar a " + nom + " del sistema?")) return;
-      const r = await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+      await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
       setMsg("🗑️ " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000);
     }
     cargar();
+  };
+
+  const eliminarSectorPerm = async (id: string, nom: string) => {
+    if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE sector " + nom + "?")) return;
+    if (!confirm("Confirmación final: eliminar sector " + nom + "?")) return;
+    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+    setMsg("🗑️ Sector " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000);
+    cargar();
+  };
+
+  const toggleSector = async (id: string, nom: string, activo: boolean) => {
+    if (!confirm((activo?"Desactivar":"Reactivar") + " sector " + nom + "?")) return;
+    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:!activo }) });
+    cargar(); setMsg((activo?"🚫":"✅") + " Sector " + (activo?"desactivado":"reactivado")); setTimeout(()=>setMsg(""),3000);
   };
 
   const guardarSector = async (id: string) => {
@@ -66,12 +80,6 @@ export default function ConfigPage() {
     if (!nSec.trim()) return;
     await fetch(`${SB}/rest/v1/sectores`, { method:"POST", headers:{...H,Prefer:"return=representation"}, body:JSON.stringify({ nombre:nSec.trim(), capacidad:nCap, color_hex:nCol, orden:secs.length+1 }) });
     setNSec(""); cargar(); setMsg("✅ Sector agregado"); setTimeout(()=>setMsg(""),2000);
-  };
-
-  const toggleSector = async (id: string, nom: string, activo: boolean) => {
-    if (!confirm((activo?"Desactivar":"Reactivar") + " sector " + nom + "?")) return;
-    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:!activo }) });
-    cargar(); setMsg((activo?"🚫":"✅") + " Sector " + (activo?"desactivado":"reactivado")); setTimeout(()=>setMsg(""),3000);
   };
 
   const agregarValet = async () => {
@@ -104,7 +112,7 @@ export default function ConfigPage() {
               <div><p className="font-semibold text-gray-700">{v.nombre} #{v.numero_valet}</p><p className="text-xs text-gray-400">PIN: {v.pin||"—"} {v.activo===false?"· 🔴 Inactivo":""}</p></div>
               <div className="flex gap-1">
                 {v.activo!==false&&<button onClick={()=>accionValet(v.id,v.nombre,"desactivar")} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🚫</button>}
-                {v.activo===false&&<button onClick={()=>accionValet(v.id,v.nombre,"reactivar")} className="bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold">✅ Reactivar</button>}
+                {v.activo===false&&<button onClick={()=>accionValet(v.id,v.nombre,"reactivar")} className="bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold">✅</button>}
                 <button onClick={()=>accionValet(v.id,v.nombre,"eliminar")} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🗑️</button>
               </div>
             </div>
@@ -140,11 +148,17 @@ export default function ConfigPage() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full" style={{backgroundColor:s.color_hex}} />
-                  <div className="flex-1"><p className="font-semibold text-gray-700">{s.nombre}</p><p className="text-xs text-gray-400">Cap:{s.capacidad} {!s.activo?"· 🔴 Inactivo":""}</p></div>
-                  {s.activo&&<button onClick={()=>{setEdS(s.id);setENom(s.nombre);setECap(s.capacidad);setECol(s.color_hex);setEOrd(s.orden);}} className="text-blue-600 text-sm font-semibold">Editar</button>}
-                  <button onClick={()=>toggleSector(s.id,s.nombre,s.activo)} className={`text-sm font-semibold ${s.activo?"text-red-500":"text-green-600"}`}>{s.activo?"🚫":"✅"}</button>
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full flex-shrink-0" style={{backgroundColor:s.color_hex}} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-700 text-sm truncate">{s.nombre}</p>
+                    <p className="text-xs text-gray-400">Cap:{s.capacidad}{!s.activo?" 🔴 Inactivo":""}</p>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    {s.activo&&<button onClick={()=>{setEdS(s.id);setENom(s.nombre);setECap(s.capacidad);setECol(s.color_hex);setEOrd(s.orden);}} className="text-blue-600 text-xs font-semibold px-1.5 py-1">✏️</button>}
+                    <button onClick={()=>toggleSector(s.id,s.nombre,s.activo)} className={`text-xs font-semibold px-1.5 py-1 ${s.activo?"text-red-500":"text-green-600"}`}>{s.activo?"🚫":"✅"}</button>
+                    <button onClick={()=>eliminarSectorPerm(s.id,s.nombre)} className="text-red-500 text-xs px-1.5 py-1">🗑️</button>
+                  </div>
                 </div>
               )}
             </div>
