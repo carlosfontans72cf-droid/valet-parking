@@ -6,16 +6,21 @@ const q = async (u: string) => { try { const r = await fetch(u, { headers: BH })
 
 export default function SupervisorPage() {
   const [eventos, setEventos] = useState<any[]>([]);
+  const [eventoId, setEventoId] = useState("");
+  const [eventoNom, setEventoNom] = useState("");
   const [totalActivos, setTotalActivos] = useState(0);
   const [totalHoy, setTotalHoy] = useState(0);
+  const [totalEnEvento, setTotalEnEvento] = useState(0);
   const [uName, setUName] = useState("Supervisor");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Verificar sesión
     const name = localStorage.getItem("userName");
     if (!name) { window.location.href = "/"; return; }
     setUName(name);
+    // Cargar evento activo guardado
+    const saved = localStorage.getItem("eventoActivoId");
+    if (saved) setEventoId(saved);
     cargar();
     const t = setInterval(cargar, 10000);
     return () => clearInterval(t);
@@ -33,6 +38,12 @@ export default function SupervisorPage() {
       }
       setError("");
     } catch (e) { setError("Error al cargar datos"); }
+  };
+
+  const seleccionarEvento = (id: string, nom: string) => {
+    setEventoId(id);
+    setEventoNom(nom);
+    localStorage.setItem("eventoActivoId", id);
   };
 
   const cerrarSesion = () => { localStorage.clear(); window.location.href = "/"; };
@@ -88,14 +99,35 @@ export default function SupervisorPage() {
           </button>
         </div>
 
-        {/* Eventos Activos */}
-        <h2 className="text-lg font-bold text-white mb-3">🟢 Eventos en curso</h2>
+        {/* Selector de Evento */}
+        <p className="text-gray-400 text-xs font-semibold mb-2">📋 Evento activo:</p>
+        {eventos.length > 1 ? (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+            {eventos.map((ev: any) => (
+              <button key={ev.id} onClick={() => seleccionarEvento(ev.id, ev.nombre)}
+                className={`px-5 py-3 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all active:scale-95 ${eventoId === ev.id ? "bg-blue-600 text-white shadow-lg ring-2 ring-blue-300" : "bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700"}`}>
+                📋 {ev.nombre} <span className="text-xs opacity-70">({ev.vehiculos_totales})</span>
+              </button>
+            ))}
+          </div>
+        ) : eventos.length === 1 ? (
+          <div className="mb-4">
+            <div onClick={() => seleccionarEvento(eventos[0].id, eventos[0].nombre)}
+              className={`px-5 py-3 rounded-2xl text-sm font-semibold inline-block cursor-pointer transition-all ${eventoId === eventos[0].id ? "bg-blue-600 text-white shadow-lg" : "bg-gray-800 text-gray-300 border border-gray-700"}`}>
+              📋 {eventos[0].nombre}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Eventos en curso - lista con selector */}
+        <h2 className="text-lg font-bold text-white mb-3">🟢 Todos los eventos</h2>
         <div className="space-y-2 mb-6">
           {eventos.map((ev: any) => (
-            <div key={ev.id} className="bg-gray-800 rounded-2xl p-4">
+            <div key={ev.id} onClick={() => seleccionarEvento(ev.id, ev.nombre)}
+              className={`bg-gray-800 rounded-2xl p-4 cursor-pointer transition-all active:scale-95 border-2 ${eventoId === ev.id ? "border-blue-500 shadow-lg shadow-blue-500/20" : "border-transparent hover:bg-gray-700"}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-bold text-white text-lg">{ev.nombre}</p>
+                  <p className="font-bold text-white text-lg">{ev.nombre} {eventoId === ev.id && <span className="text-blue-400 text-sm ml-2">✓ activo</span>}</p>
                   <p className="text-sm text-gray-400">🚗 {ev.vehiculos_totales} vehículos</p>
                 </div>
               </div>
