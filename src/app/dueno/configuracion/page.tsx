@@ -56,6 +56,7 @@ export default function ConfigPage() {
           <div key={x.id} className="border rounded-xl p-3 mb-2 flex items-center justify-between">
             <div><p className="font-semibold">{x.nombre} #{x.numero_valet}</p><p className="text-xs">{x.pin || ""} {x.activo === false ? "(Inactivo)" : ""}</p></div>
             <div className="flex gap-1">
+              <button onClick={() => wp(`🔑 ${x.nombre} #${x.numero_valet}\nPIN: ${x.pin}`)} className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs">💬</button>
               {x.activo !== false && <button onClick={async () => { await act("perfiles?id=eq." + x.id, "PATCH", { activo: false }); load(); }} className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-xs">Desactivar</button>}
               {x.activo === false && <button onClick={async () => { await act("perfiles?id=eq." + x.id, "PATCH", { activo: true }); load(); }} className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs">Reactivar</button>}
               <button onClick={async () => { if (!confirm("Eliminar?") || !confirm("Confirmar?")) return; await act("perfiles?id=eq." + x.id, "DELETE"); load(); m("Eliminado"); }} className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-xs">Eliminar</button>
@@ -82,7 +83,10 @@ export default function ConfigPage() {
           <div key={x.id} className="border rounded-xl p-3 mb-2 flex items-center justify-between">
             <p className="font-semibold">{x.nombre}</p>
             <p className="text-xs">PIN: {x.pin || "-"}</p>
-            <button onClick={async () => { if (!confirm("Eliminar?") || !confirm("Confirmar?")) return; await act("perfiles?id=eq." + x.id, "DELETE"); load(); }} className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-xs">Eliminar</button>
+            <div className="flex gap-1">
+              <button onClick={() => wp(`👑 ${x.nombre}\nPIN: ${x.pin}`)} className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs">💬</button>
+              <button onClick={async () => { if (!confirm("Eliminar?") || !confirm("Confirmar?")) return; await act("perfiles?id=eq." + x.id, "DELETE"); load(); }} className="bg-red-100 text-red-600 px-2 py-1 rounded-lg text-xs">Eliminar</button>
+            </div>
           </div>
         ))}
         <div className="bg-gray-100 rounded-xl p-4">
