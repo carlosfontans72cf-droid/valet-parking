@@ -25,8 +25,7 @@ export default function DuenoPage() {
     const hoy = new Date().toISOString().split("T")[0];
     const th = await q(`${SB}/rest/v1/tickets?select=id&hora_entrada=gte.${hoy}`);
     setTotHoy(Array.isArray(th)?th.length:0);
-    // Historial auditoría
-    const h = await q(`${SB}/rest/v1/historial_completo?select=id,tipo,id_valet,id_ticket,id_evento,creado_en&order=creado_en.desc&limit=30order=creado_en.desc`);
+    const h = await q(`${SB}/rest/v1/historial_completo?order=creado_en.desc`);
     if (Array.isArray(h)) {
       const enr = await Promise.all(h.map(async (x:any) => {
         const p = await q(`${SB}/rest/v1/perfiles?select=nombre&id=eq.${x.id_valet}`);
@@ -45,20 +44,39 @@ export default function DuenoPage() {
     setNuevo(""); setMsg("✅ Creado"); setTimeout(()=>setMsg(""),2000); cargar();
   };
 
-  const cerrar = async (id: string) => {
-    if (!confirm("Cerrar evento?")) return;
+  const cerrarEvento = async (id: string, nom: string) => {
+    if (!confirm(`Cerrar evento "${nom}"?`)) return;
     await fetch(`${SB}/rest/v1/eventos?id=eq.${id}`, { method:"PATCH", headers:{"Content-Type":"application/json",apikey:AK,Authorization:`Bearer ${AK}`}, body:JSON.stringify({ estado:"cerrado", fecha_cierre:new Date().toISOString() }) });
     cargar();
   };
 
+  const eliminarEvento = async (id: string, nom: string) => {
+    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE "${nom}"?`)) return;
+    if (!confirm(`Confirmación final: borrar "${nom}" y todos sus datos?`)) return;
+    // Primero borrar historial y tickets del evento
+    const tkts = await q(`${SB}/rest/v1/tickets?select=id&id_evento=eq.${id}`);
+    if (Array.isArray(tkts)) {
+      for (const t of tkts) {
+        await fetch(`${SB}/rest/v1/historial_completo?id_ticket=eq.${t.id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+      }
+      await fetch(`${SB}/rest/v1/tickets?id_evento=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+    }
+    await fetch(`${SB}/rest/v1/eventos?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+    setMsg(`🗑️ "${nom}" eliminado`); setTimeout(()=>setMsg(""),3000); cargar();
+  };
+
+  const eliminarValet = async (id: string, nom: string) => {
+    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE a "${nom}"? Se borrarán todos sus datos.`)) return;
+    if (!confirm(`Confirmación final: eliminar a "${nom}" del sistema?`)) return;
+    await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+    setMsg(`🗑️ "${nom}" eliminado del sistema`); setTimeout(()=>setMsg(""),3000); cargar();
+  };
+
   const wp = (t: string) => window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, "_blank");
-  
   const exportCSV = () => {
     if (!hist.length) return;
-    const csv = "Fecha,Hora,Ticket,Acción,Valet,Evento\n" + hist.map((h:any) =>
-      `${new Date(h.creado_en).toLocaleDateString("es-ES")},${new Date(h.creado_en).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})},${h.tn},${h.tipo},${h.vn},${h.en}`
-    ).join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = `auditoria-${new Date().toISOString().split("T")[0]}.csv`; a.click();
+    const csv = "Fecha,Hora,Ticket,Acción,Valet,Evento\n"+hist.map((h:any)=>`${new Date(h.creado_en).toLocaleDateString("es-ES")},${new Date(h.creado_en).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})},${h.tn},${h.tipo},${h.vn},${h.en}`).join("\n");
+    const a = document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`auditoria-${new Date().toISOString().split("T")[0]}.csv`; a.click();
   };
 
   const icono = (t: string) => t==="entrada"?"🚗":t==="retiro_entregado"?"✅":t.includes("cambio")?"🔄":"📍";
@@ -77,10 +95,8 @@ export default function DuenoPage() {
       {msg&&<div className="bg-blue-100 text-blue-700 p-3 rounded-xl text-sm mb-4">{msg}</div>}
 
       <div className="grid grid-cols-2 gap-2 mb-6">
-        <button onClick={()=>window.location.href="/valet/entrada"} className="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl p-5 text-center shadow-lg active:scale-95">
-          <span className="text-3xl block mb-1">🚗</span><span className="font-bold text-lg">Registrar Entrada</span></button>
-        <button onClick={()=>window.location.href="/dueno/configuracion"} className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-2xl p-5 text-center shadow-lg active:scale-95">
-          <span className="text-3xl block mb-1">🔑</span><span className="font-bold text-lg">Crear Valet</span></button>
+        <button onClick={()=>window.location.href="/valet/entrada"} className="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl p-5 text-center shadow-lg active:scale-95"><span className="text-3xl block mb-1">🚗</span><span className="font-bold text-lg">Registrar Entrada</span></button>
+        <button onClick={()=>window.location.href="/dueno/configuracion"} className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-2xl p-5 text-center shadow-lg active:scale-95"><span className="text-3xl block mb-1">🔑</span><span className="font-bold text-lg">Crear Valet</span></button>
       </div>
 
       <div className="grid grid-cols-4 gap-2 mb-4">
@@ -101,24 +117,22 @@ export default function DuenoPage() {
       {evs.map(ev => (
         <div key={ev.id} className="bg-white rounded-2xl shadow p-4 mb-2 flex items-center justify-between">
           <div><p className="font-bold text-gray-800">{ev.nombre}</p><p className="text-xs text-gray-500">🚗 {ev.vehiculos_totales} · {new Date(ev.fecha_apertura).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</p></div>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <button onClick={()=>wp(`🎫 ${ev.nombre}: ${ev.vehiculos_totales} vehículos`)} className="bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-xs">💬</button>
-            <button onClick={()=>cerrar(ev.id)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🔴</button>
+            <button onClick={()=>cerrarEvento(ev.id,ev.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🔴</button>
+            <button onClick={()=>eliminarEvento(ev.id,ev.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🗑️</button>
           </div>
         </div>
       ))}
 
-      {/* Botones WhatsApp y Excel */}
       <div className="grid grid-cols-2 gap-2 mt-4 mb-6">
         <button onClick={exportCSV} className="bg-green-700 text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow active:scale-95">📊 Exportar CSV</button>
         <button onClick={()=>wp(`📊 ${nomApp}\n🚗 Activos: ${total}\n📋 Eventos: ${evs.length}\n📅 Hoy: ${totHoy}`)} className="bg-green-600 text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow active:scale-95">💬 WhatsApp</button>
       </div>
 
-      {/* HISTORIAL AUDITORÍA */}
+      {/* HISTORIAL */}
       <div className="bg-white rounded-2xl shadow p-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-bold text-gray-700">📜 Historial (últimos 30 movimientos)</p>
-        </div>
+        <div className="flex items-center justify-between mb-3"><p className="font-bold text-gray-700">📜 Historial ({hist.length} movimientos)</p></div>
         <div className="space-y-1.5 max-h-80 overflow-y-auto">
           {hist.map((h:any) => (
             <div key={h.id} className="flex items-center gap-2 p-2 text-xs border-b border-gray-100">
@@ -130,7 +144,7 @@ export default function DuenoPage() {
               <span className="text-gray-400 ml-auto">{new Date(h.creado_en).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span>
             </div>
           ))}
-          {hist.length===0&&<p className="text-gray-400 text-xs text-center py-4">Sin movimientos aún</p>}
+          {hist.length===0&&<p className="text-gray-400 text-xs text-center py-4">Sin movimientos</p>}
         </div>
       </div>
     </div>

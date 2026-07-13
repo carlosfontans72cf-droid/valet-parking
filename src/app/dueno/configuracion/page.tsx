@@ -40,6 +40,13 @@ export default function ConfigPage() {
     }
   };
 
+  const eliminarValetDef = async (id: string, nom: string) => {
+    if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE a " + nom + "?")) return;
+    if (!confirm("Confirmación final: eliminar a " + nom + " del sistema?")) return;
+    await fetch(SB + "/rest/v1/perfiles?id=eq." + id, { method:"DELETE", headers:{"apikey":AK,Authorization:"Bearer "+AK} });
+    cargar(); setMsg("🗑️ " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000);
+  };
+
   const desactivarValet = async (id: string, nom: string) => {
     if (!confirm(`Desactivar a "${nom}"?`)) return;
     await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:false }) });
@@ -91,7 +98,7 @@ export default function ConfigPage() {
           {vals.filter((v:any)=>v.rol==="valet").map((v:any) => (
             <div key={v.id} className={`border rounded-xl p-3 flex items-center justify-between ${v.activo===false?"border-red-200 bg-red-50":"border-gray-200"}`}>
               <div><p className="font-semibold text-gray-700">{v.nombre} #{v.numero_valet}</p><p className="text-xs text-gray-400">PIN: {v.pin||"—"} {v.activo===false?"· 🔴 Inactivo":""}</p></div>
-              {v.activo!==false&&<button onClick={()=>desactivarValet(v.id,v.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-200">🚫 Desactivar</button>}
+              {v.activo!==false&&<><button onClick={()=>desactivarValet(v.id,v.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-200">🚫 Desactivar</button><button onClick={()=>eliminarValetDef(v.id,v.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-200 ml-1">🗑️</button></>}
             </div>
           ))}
         </div>

@@ -112,7 +112,7 @@ export default function EntradaPage() {
             <input value={col} onChange={e=>setCol(e.target.value)} className="w-full py-4 px-3 text-base rounded-xl bg-white/10 border border-gray-600 text-white text-center" placeholder="Color" />
           </div>
           <div className="grid grid-cols-2 gap-1.5">
-            <button type="button" onClick={()=>fotoRef.current?.click()} className="w-full py-5 rounded-2xl font-bold text-base bg-gray-700 text-white hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <button type="button" onClick={()=>fotoRef.current?.click()} className="w-full py-4 rounded-2xl font-bold text-sm bg-gray-700 text-white hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center gap-2">
               <span className="text-2xl">📸</span> Foto</button>
             <input ref={fotoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)setFoto(URL.createObjectURL(f));}} />
             <button type="button" onClick={()=>setDanos(!danos)} className={`w-full py-5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all ${danos?"bg-red-600 text-white":"bg-gray-700 text-white hover:bg-gray-600"}`}>
