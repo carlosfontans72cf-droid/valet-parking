@@ -2,6 +2,8 @@
 export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
 const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen", BH = { apikey: AK, Authorization: `Bearer ${AK}` };
+const api = async (u: string) => { try { const r = await fetch(u, { headers: BH }); const t = await r.text(); return t && t !== "[]" ? JSON.parse(t) : []; } catch { return []; } };
+const act = async (u: string, m: string, d?: any) => fetch(u, { method: m, headers: { ...BH, "Content-Type": "application/json" }, body: d ? JSON.stringify(d) : undefined });
 
 export default function DuenoPage() {
   const [evs, setEvs] = useState<any[]>([]);
@@ -12,9 +14,6 @@ export default function DuenoPage() {
   const [hist, setHist] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
   const uName = typeof window !== 'undefined' ? localStorage.getItem("userName") || "Dueño" : "";
-
-  const api = async (url: string) => { try { const r = await fetch(url, { headers: BH }); const t = await r.text(); return t && t !== "[]" ? JSON.parse(t) : []; } catch { return []; } };
-  const act = async (url: string, method: string, d?: any) => fetch(url, { method, headers: { ...BH, "Content-Type": "application/json" }, body: d ? JSON.stringify(d) : undefined });
 
   const cargar = async () => {
     const c = await api(`${SB}/rest/v1/configuracion_app?limit=1`);
@@ -27,8 +26,8 @@ export default function DuenoPage() {
       const hoy = new Date().toISOString().split("T")[0];
       setTotHoy((await api(`${SB}/rest/v1/tickets?select=id&hora_entrada=gte.${hoy}&id_evento=in.(${evIds})`)).length);
     } else { setTotal(0); setTotHoy(0); }
-    // Historial con nombres
-    const h = await api(`${SB}/rest/v1/historial_completo?order=creado_en.desc&limit=50`);
+    // Historial with event names
+    const h = await api(`${SB}/rest/v1/historial_completo?order=creado_en.desc&limit=100`);
     if (h.length) {
       const enr = await Promise.all(h.map(async (x: any) => {
         const [p, tkt, ev] = await Promise.all([
@@ -41,32 +40,30 @@ export default function DuenoPage() {
       setHist(enr);
     }
   };
-
   useEffect(() => { cargar(); }, []);
-
   const crear = async () => {
     if (!nuevo.trim()) return;
-    await act(`${SB}/rest/v1/eventos`, "POST", { nombre: nuevo.trim(), abierto_por: localStorage.getItem("userId") || "be8e22f7-5afd-426d-a777-0f69a68e1984" });
+    await act(`${SB}/rest/v1/eventos`, "POST", { nombre: nuevo.trim(), abierto_por: localStorage.getItem("userId") || "" });
     setNuevo(""); setMsg("Creado"); setTimeout(() => setMsg(""), 2000); cargar();
   };
-
   const cerrarEvento = async (id: string) => { if (!confirm("Cerrar?")) return; await act(`${SB}/rest/v1/eventos?id=eq.${id}`, "PATCH", { estado: "cerrado", fecha_cierre: new Date().toISOString() }); cargar(); };
   const eliminarEvento = async (id: string, nom: string) => {
     if (!confirm("ELIMINAR " + nom + "?") || !confirm("Confirmar?")) return;
     const tkts = await api(`${SB}/rest/v1/tickets?select=id&id_evento=eq.${id}`);
     for (const t of tkts) await act(`${SB}/rest/v1/historial_completo?id_ticket=eq.${t.id}`, "DELETE");
-    await act(`${SB}/rest/v1/tickets?id_evento=eq.${id}`, "DELETE");
-    await act(`${SB}/rest/v1/eventos?id=eq.${id}`, "DELETE");
+    await act(`${SB}/rest/v1/tickets?id_evento=eq.${id}`, "DELETE"); await act(`${SB}/rest/v1/eventos?id=eq.${id}`, "DELETE");
     setMsg("Eliminado"); setTimeout(() => setMsg(""), 3000); cargar();
   };
-
   const cerrarSesion = () => { localStorage.clear(); window.location.href = "/"; };
   const wp = (t: string) => window.open("https://wa.me/?text=" + encodeURIComponent(t), "_blank");
   const exportCSV = () => {
     if (!hist.length) return;
     const csv = "Fecha,Hora,Ticket,Accion,Valet,Evento\n" + hist.map((h: any) => new Date(h.creado_en).toLocaleDateString() + "," + new Date(h.creado_en).toLocaleTimeString() + "," + h.tn + "," + h.tipo + "," + h.vn + "," + h.en).join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "auditoria.csv"; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "historial.csv"; a.click();
   };
+  // Group historial by event
+  const histByEvent: Record<string, any[]> = {};
+  hist.forEach((h: any) => { const key = h.en || "General"; if (!histByEvent[key]) histByEvent[key] = []; histByEvent[key].push(h); });
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" style={{ maxWidth: 640, margin: "0 auto" }}>
@@ -81,19 +78,16 @@ export default function DuenoPage() {
         </div>
       </div>
       {msg && <div className="bg-blue-100 text-blue-700 p-3 rounded-xl text-sm mb-4">{msg}</div>}
-
       <div className="grid grid-cols-2 gap-2 mb-6">
-        <button onClick={() => window.location.href = "/valet/entrada"} className="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl p-4 text-center shadow-lg active:scale-95"><span className="text-3xl block mb-1">🚗</span><span className="font-semibold">Registrar Entrada</span></button>
-        <button onClick={() => window.location.href = "/dueno/configuracion"} className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-2xl p-4 text-center shadow-lg active:scale-95"><span className="text-3xl block mb-1">🔑</span><span className="font-semibold">Crear Valet</span></button>
+        <button onClick={() => window.location.href = "/valet/entrada"} className="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl p-4 text-center shadow-lg"><span className="text-3xl block mb-1">🚗</span><span className="font-semibold">Registrar Entrada</span></button>
+        <button onClick={() => window.location.href = "/dueno/configuracion"} className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-2xl p-4 text-center shadow-lg"><span className="text-3xl block mb-1">🔑</span><span className="font-semibold">Crear Valet</span></button>
       </div>
-
       <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="bg-white rounded-2xl shadow p-3 text-center"><p className="text-2xl font-bold text-blue-600">{total}</p><p className="text-xs text-gray-500">Activos</p></div>
         <div className="bg-white rounded-2xl shadow p-3 text-center"><p className="text-2xl font-bold text-green-600">{totHoy}</p><p className="text-xs text-gray-500">Hoy</p></div>
         <div className="bg-white rounded-2xl shadow p-3 text-center"><p className="text-2xl font-bold text-amber-600">{evs.length}</p><p className="text-xs text-gray-500">Eventos</p></div>
         <div className="bg-white rounded-2xl shadow p-3 text-center"><p className="text-2xl font-bold text-purple-600">{hist.length}</p><p className="text-xs text-gray-500">Movs</p></div>
       </div>
-
       <div className="bg-white rounded-2xl shadow p-4 mb-4">
         <p className="font-bold mb-3">Nuevo Evento</p>
         <div className="flex gap-2">
@@ -101,7 +95,6 @@ export default function DuenoPage() {
           <button onClick={crear} className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold">Crear</button>
         </div>
       </div>
-
       {evs.map(ev => (
         <div key={ev.id} className="bg-white rounded-2xl shadow p-3 mb-2 flex items-center justify-between">
           <div><p className="font-semibold">{ev.nombre}</p><p className="text-xs text-gray-500">{ev.vehiculos_totales} vehiculos</p></div>
@@ -112,35 +105,29 @@ export default function DuenoPage() {
           </div>
         </div>
       ))}
-
       <div className="grid grid-cols-2 gap-2 mt-4 mb-6">
         <button onClick={exportCSV} className="bg-green-700 text-white py-4 rounded-2xl font-bold shadow active:scale-95">📊 Exportar CSV</button>
-        <button onClick={() => {
-          let texto = "📊 " + nomApp + " - Resumen\n";
-          texto += "🚗 Activos: " + total + "\n📋 Eventos: " + evs.length + "\n📅 Hoy: " + totHoy + "\n\n📜 Historial:\n";
-          hist.slice(0, 15).forEach((h: any) => {
-            texto += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + (h.en ? " (" + h.en + ")" : "") + "\n";
-          });
-          wp(texto);
-        }} className="bg-green-600 text-white py-4 rounded-2xl font-bold shadow active:scale-95">💬 WhatsApp</button>
+        <button onClick={() => { let t = "📊 " + nomApp + " - Resumen\n🚗 " + total + " activos\n📋 " + evs.length + " eventos\n\n"; hist.slice(0, 20).forEach((h: any) => { t += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + (h.en ? " [" + h.en + "]" : "") + "\n"; }); wp(t); }} className="bg-green-600 text-white py-4 rounded-2xl font-bold shadow active:scale-95">💬 WhatsApp</button>
       </div>
-
-      <div className="bg-white rounded-2xl shadow p-4">
-        <p className="font-bold mb-3">Historial ({hist.length} movimientos)</p>
-        <div className="max-h-96 overflow-y-auto space-y-1">
-          {hist.slice(0, 50).map((h: any) => (
-            <div key={h.id} className="flex items-center gap-2 p-2 text-xs border-b border-gray-100">
-              <span>{h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : h.tipo === "cambio_sector" ? "🔄" : "📍"}</span>
-              {h.tn && <span className="font-bold">#{h.tn}</span>}
-              <span className="text-gray-500 font-medium uppercase">{h.tipo === "retiro_entregado" ? "ENTREGÓ" : h.tipo === "cambio_sector" ? "CAMBIO" : h.tipo === "entrada" ? "ENTRADA" : h.tipo}</span>
-              <span className="text-gray-400">· {h.vn}</span>
-              {h.en && <span className="text-gray-400">· {h.en}</span>}
-              <span className="text-gray-400 ml-auto">{h.creado_en ? new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
-            </div>
-          ))}
-          {hist.length === 0 && <p className="text-gray-400 text-xs text-center py-4">Sin movimientos</p>}
+      {/* Historial grouped by event */}
+      {Object.entries(histByEvent).slice(0, 5).map(([eventName, items]) => (
+        <div key={eventName} className="bg-white rounded-2xl shadow p-4 mb-3">
+          <p className="font-bold mb-2 text-purple-700">📋 {eventName} ({items.length})</p>
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {items.slice(0, 30).map((h: any) => (
+              <div key={h.id} className="flex items-center gap-2 p-1.5 text-xs border-b border-gray-100">
+                <span>{h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : h.tipo === "cambio_sector" ? "🔄" : "📍"}</span>
+                {h.tn && <span className="font-bold">#{h.tn}</span>}
+                <span className="text-gray-500 uppercase">{h.tipo === "retiro_entregado" ? "ENTREGÓ" : h.tipo === "cambio_sector" ? "CAMBIO" : h.tipo === "entrada" ? "ENTRADA" : h.tipo}</span>
+                <span className="text-gray-400">· {h.vn}</span>
+                <span className="text-gray-400 ml-auto">{h.creado_en ? new Date(h.creado_en).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : ""}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => { let t = "📋 " + eventName + "\n"; items.slice(0, 30).forEach((h: any) => { t += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + " " + new Date(h.creado_en).toLocaleTimeString() + "\n"; }); wp(t); }} className="text-green-600 text-xs mt-2 font-semibold">💬 Compartir este evento</button>
         </div>
-      </div>
+      ))}
+      {hist.length === 0 && <p className="text-gray-400 text-xs text-center py-4">Sin movimientos</p>}
     </div>
   );
 }

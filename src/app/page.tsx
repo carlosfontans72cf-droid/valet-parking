@@ -98,8 +98,8 @@ export default function LoginPage() {
             </div>
             <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={i} placeholder="Apellido" required autoComplete="off" />
             <div className="relative">
-              <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={i+" pr-12"} placeholder="PIN" maxLength={6} required autoComplete="new-password" />
-              <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl">{showPin?"🙈":"👁️"}</button>
+              <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={i+" pr-12"} placeholder="PIN" maxLength={6} required autoComplete="off" />
+              <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-3 top-1/2 /3 text-gray-400 text-xl">{showPin?"🙈":"👁️"}</button>
             </div>
             {err && <div className="bg-red-500/20 text-red-300 p-3 rounded-xl text-sm text-center border border-red-500/30">{err}</div>}
             <button type="submit" disabled={busy} className="w-full py-5 rounded-2xl text-white font-bold text-xl bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50 shadow-lg active:scale-95 transition-all">
