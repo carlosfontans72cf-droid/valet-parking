@@ -45,15 +45,14 @@ export default function DuenoPage() {
   };
 
   const cerrarEvento = async (id: string, nom: string) => {
-    if (!confirm(`Cerrar evento "${nom}"?`)) return;
+    if (!confirm("Cerrar evento " + nom + "?")) return;
     await fetch(`${SB}/rest/v1/eventos?id=eq.${id}`, { method:"PATCH", headers:{"Content-Type":"application/json",apikey:AK,Authorization:`Bearer ${AK}`}, body:JSON.stringify({ estado:"cerrado", fecha_cierre:new Date().toISOString() }) });
     cargar();
   };
 
   const eliminarEvento = async (id: string, nom: string) => {
-    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE "${nom}"?`)) return;
-    if (!confirm(`Confirmación final: borrar "${nom}" y todos sus datos?`)) return;
-    // Primero borrar historial y tickets del evento
+    if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE " + nom + "?")) return;
+    if (!confirm("Confirmación final: borrar " + nom + " y todos sus datos?")) return;
     const tkts = await q(`${SB}/rest/v1/tickets?select=id&id_evento=eq.${id}`);
     if (Array.isArray(tkts)) {
       for (const t of tkts) {
@@ -62,21 +61,19 @@ export default function DuenoPage() {
       await fetch(`${SB}/rest/v1/tickets?id_evento=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
     }
     await fetch(`${SB}/rest/v1/eventos?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
-    setMsg(`🗑️ "${nom}" eliminado`); setTimeout(()=>setMsg(""),3000); cargar();
+    setMsg("🗑️ " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000); cargar();
   };
 
-  const eliminarValet = async (id: string, nom: string) => {
-    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE a "${nom}"? Se borrarán todos sus datos.`)) return;
-    if (!confirm(`Confirmación final: eliminar a "${nom}" del sistema?`)) return;
-    await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
-    setMsg(`🗑️ "${nom}" eliminado del sistema`); setTimeout(()=>setMsg(""),3000); cargar();
+  const cerrarSesion = () => {
+    localStorage.clear();
+    window.location.href = "/";
   };
 
-  const wp = (t: string) => window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, "_blank");
+  const wp = (t: string) => window.open("https://wa.me/?text=" + encodeURIComponent(t), "_blank");
   const exportCSV = () => {
     if (!hist.length) return;
-    const csv = "Fecha,Hora,Ticket,Acción,Valet,Evento\n"+hist.map((h:any)=>`${new Date(h.creado_en).toLocaleDateString("es-ES")},${new Date(h.creado_en).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})},${h.tn},${h.tipo},${h.vn},${h.en}`).join("\n");
-    const a = document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`auditoria-${new Date().toISOString().split("T")[0]}.csv`; a.click();
+    const csv = "Fecha,Hora,Ticket,Acción,Valet,Evento\n"+hist.map((h:any)=>new Date(h.creado_en).toLocaleDateString("es-ES")+","+new Date(h.creado_en).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})+","+h.tn+","+h.tipo+","+h.vn+","+h.en).join("\n");
+    const a = document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="auditoria-"+new Date().toISOString().split("T")[0]+".csv"; a.click();
   };
 
   const icono = (t: string) => t==="entrada"?"🚗":t==="retiro_entregado"?"✅":t.includes("cambio")?"🔄":"📍";
@@ -86,10 +83,11 @@ export default function DuenoPage() {
       <div className="flex items-center justify-between mb-6">
         <div><h1 className="text-2xl font-bold text-gray-800">👑 {nomApp}</h1><p className="text-gray-500">{uName}</p></div>
         <div className="flex gap-1">
-          <button onClick={()=>window.location.href="/dashboard"} className="bg-gray-200 px-3 py-2 rounded-xl text-sm font-semibold">📊</button>
-          <button onClick={()=>window.location.href="/dashboard/tv"} className="bg-gray-800 text-white px-3 py-2 rounded-xl text-sm font-semibold">📺</button>
-          <button onClick={()=>window.location.href="/valet"} className="bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-semibold">🚗</button>
-          <button onClick={()=>window.location.href="/dueno/configuracion"} className="bg-purple-600 text-white px-3 py-2 rounded-xl text-sm font-semibold">⚙️</button>
+          <button onClick={()=>window.location.href="/dashboard"} className="bg-gray-200 px-2.5 py-1.5 rounded-xl text-xs font-semibold">📊</button>
+          <button onClick={()=>window.location.href="/dashboard/tv"} className="bg-gray-800 text-white px-2.5 py-1.5 rounded-xl text-xs font-semibold">📺</button>
+          <button onClick={()=>window.location.href="/valet"} className="bg-blue-600 text-white px-2.5 py-1.5 rounded-xl text-xs font-semibold">🚗</button>
+          <button onClick={()=>window.location.href="/dueno/configuracion"} className="bg-purple-600 text-white px-2.5 py-1.5 rounded-xl text-xs font-semibold">⚙️</button>
+          <button onClick={cerrarSesion} className="bg-gray-800 text-white px-2.5 py-1.5 rounded-xl text-xs font-semibold">🚪</button>
         </div>
       </div>
       {msg&&<div className="bg-blue-100 text-blue-700 p-3 rounded-xl text-sm mb-4">{msg}</div>}
@@ -118,7 +116,7 @@ export default function DuenoPage() {
         <div key={ev.id} className="bg-white rounded-2xl shadow p-4 mb-2 flex items-center justify-between">
           <div><p className="font-bold text-gray-800">{ev.nombre}</p><p className="text-xs text-gray-500">🚗 {ev.vehiculos_totales} · {new Date(ev.fecha_apertura).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</p></div>
           <div className="flex gap-1">
-            <button onClick={()=>wp(`🎫 ${ev.nombre}: ${ev.vehiculos_totales} vehículos`)} className="bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-xs">💬</button>
+            <button onClick={()=>wp("🎫 " + ev.nombre + ": " + ev.vehiculos_totales + " vehículos")} className="bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-xs">💬</button>
             <button onClick={()=>cerrarEvento(ev.id,ev.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🔴</button>
             <button onClick={()=>eliminarEvento(ev.id,ev.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🗑️</button>
           </div>
@@ -127,10 +125,9 @@ export default function DuenoPage() {
 
       <div className="grid grid-cols-2 gap-2 mt-4 mb-6">
         <button onClick={exportCSV} className="bg-green-700 text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow active:scale-95">📊 Exportar CSV</button>
-        <button onClick={()=>wp(`📊 ${nomApp}\n🚗 Activos: ${total}\n📋 Eventos: ${evs.length}\n📅 Hoy: ${totHoy}`)} className="bg-green-600 text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow active:scale-95">💬 WhatsApp</button>
+        <button onClick={()=>wp("📊 " + nomApp + "\n🚗 Activos: " + total + "\n📋 Eventos: " + evs.length + "\n📅 Hoy: " + totHoy)} className="bg-green-600 text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 shadow active:scale-95">💬 WhatsApp</button>
       </div>
 
-      {/* HISTORIAL */}
       <div className="bg-white rounded-2xl shadow p-4">
         <div className="flex items-center justify-between mb-3"><p className="font-bold text-gray-700">📜 Historial ({hist.length} movimientos)</p></div>
         <div className="space-y-1.5 max-h-80 overflow-y-auto">

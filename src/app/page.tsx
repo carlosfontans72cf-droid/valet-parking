@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen";
 const q = async (u: string) => { try { const r = await fetch(u, { headers: { apikey: AK, Authorization: `Bearer ${AK}` } }); return await r.json(); } catch { return null; } };
 
@@ -9,11 +9,17 @@ export default function LoginPage() {
   const [apellido, setApellido] = useState("");
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
-  const [numV, setNumV] = useState("");
-  const [pinV, setPinV] = useState("");
-  const [showPinV, setShowPinV] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Limpiar campos al cargar
+  useEffect(() => {
+    setNombre("");
+    setApellido("");
+    setPin("");
+    localStorage.removeItem("token");
+    localStorage.removeItem("valetId");
+  }, []);
 
   const login = async (e: any) => {
     e.preventDefault();
@@ -28,7 +34,7 @@ export default function LoginPage() {
         window.location.href = "/valet"; return;
       }
       const nomCompleto = `${nombre.trim()} ${apellido.trim()}`;
-      if (!nombre.trim() || !apellido.trim() || !pin) { setErr("Completá nombre, apellido y PIN"); setBusy(false); return; }
+      if (!nombre.trim() || !apellido.trim() || !pin) { setErr("Completá todos los datos"); setBusy(false); return; }
       const d = await q(`${SB}/rest/v1/perfiles?select=id,nombre,rol&nombre=eq.${encodeURIComponent(nomCompleto)}&pin=eq.${pin}&activo=eq.true`);
       if (!Array.isArray(d) || !d.length) { setErr("Nombre, apellido o PIN incorrecto"); setBusy(false); return; }
       localStorage.setItem("token", "ok");
@@ -50,13 +56,12 @@ export default function LoginPage() {
         </div>
         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 shadow-2xl">
           <div className="flex gap-2 mb-4">
-            {["valet","supervisor","dueno"].map(r => (
-              <button key={r} onClick={() => { setTab(r); setErr(""); }} className={`flex-1 py-3 px-2 rounded-xl text-sm font-semibold ${tab===r?(r==="valet"?"bg-blue-600":r==="supervisor"?"bg-green-600":"bg-purple-600")+" text-white shadow-lg":"bg-white/20 text-gray-300"}`}>
-                {r==="valet"?"🔑 Valet":r==="supervisor"?"👁️ Supervisor":"👑 Dueño"}
+            {["valet","dueno"].map(r => (
+              <button key={r} onClick={() => { setTab(r); setErr(""); setPin(""); }} className={`flex-1 py-3 px-2 rounded-xl text-sm font-semibold ${tab===r?(r==="valet"?"bg-blue-600":"bg-purple-600")+" text-white shadow-lg":"bg-white/20 text-gray-300"}`}>
+                {r==="valet"?"🔑 Valet":"👑 Admin"}
               </button>
             ))}
           </div>
-
           <form onSubmit={login} className="space-y-4">
             <input type="text" value={nombre} onChange={e=>setNombre(e.target.value)} className={i} placeholder="Nombre" required autoFocus />
             <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={i} placeholder="Apellido" required />

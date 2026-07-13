@@ -68,7 +68,7 @@ export default function EntradaPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 pb-8">
-      <div className="flex items-center gap-3 mb-4"><button onClick={()=>window.location.href="/valet"} className="text-gray-400 text-3xl">←</button><h1 className="text-white text-xl font-bold">🚗 Entrada</h1></div>
+      <div className="flex items-center gap-3 mb-4"><button onClick={()=>window.history.back()} className="text-gray-400 text-3xl">←</button><h1 className="text-white text-xl font-bold">🚗 Entrada</h1></div>
       <div className="max-w-lg mx-auto space-y-3">
         <div className="bg-gray-800 rounded-2xl p-4 border-2 border-yellow-500/30">
           <p className="text-yellow-400 text-xs font-semibold mb-1">🎫 N° DE TICKET</p>

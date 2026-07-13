@@ -28,7 +28,7 @@ export default function ConfigPage() {
     if (Array.isArray(c)&&c.length) setNomApp(c[0].nombre_app);
     const s = await q(`${SB}/rest/v1/sectores?select=*&order=orden`);
     if (Array.isArray(s)) setSecs(s);
-    const v = await q(`${SB}/rest/v1/perfiles?select=*&order=numero_valet`);
+    const v = await q(`${SB}/rest/v1/perfiles?order=numero_valet`);
     if (Array.isArray(v)) setVals(v);
   };
 
@@ -40,17 +40,21 @@ export default function ConfigPage() {
     }
   };
 
-  const eliminarValetDef = async (id: string, nom: string) => {
-    if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE a " + nom + "?")) return;
-    if (!confirm("Confirmación final: eliminar a " + nom + " del sistema?")) return;
-    await fetch(SB + "/rest/v1/perfiles?id=eq." + id, { method:"DELETE", headers:{"apikey":AK,Authorization:"Bearer "+AK} });
-    cargar(); setMsg("🗑️ " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000);
-  };
-
-  const desactivarValet = async (id: string, nom: string) => {
-    if (!confirm(`Desactivar a "${nom}"?`)) return;
-    await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:false }) });
-    cargar(); setMsg(`🗑️ ${nom} desactivado`); setTimeout(()=>setMsg(""),3000);
+  const accionValet = async (id: string, nom: string, accion: string) => {
+    if (accion === "desactivar") {
+      if (!confirm("Desactivar a " + nom + "?")) return;
+      await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:false }) });
+      setMsg("🚫 " + nom + " desactivado"); setTimeout(()=>setMsg(""),3000);
+    } else if (accion === "reactivar") {
+      await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:true }) });
+      setMsg("✅ " + nom + " reactivado"); setTimeout(()=>setMsg(""),3000);
+    } else if (accion === "eliminar") {
+      if (!confirm("⚠️ ELIMINAR PERMANENTEMENTE a " + nom + "?")) return;
+      if (!confirm("Confirmación final: eliminar a " + nom + " del sistema?")) return;
+      const r = await fetch(`${SB}/rest/v1/perfiles?id=eq.${id}`, { method:"DELETE", headers:{"apikey":AK,Authorization:`Bearer ${AK}`} });
+      setMsg("🗑️ " + nom + " eliminado"); setTimeout(()=>setMsg(""),3000);
+    }
+    cargar();
   };
 
   const guardarSector = async (id: string) => {
@@ -64,10 +68,10 @@ export default function ConfigPage() {
     setNSec(""); cargar(); setMsg("✅ Sector agregado"); setTimeout(()=>setMsg(""),2000);
   };
 
-  const eliminarSector = async (id: string, nom: string) => {
-    if (!confirm(`Eliminar "${nom}"?`)) return;
-    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:false }) });
-    cargar();
+  const toggleSector = async (id: string, nom: string, activo: boolean) => {
+    if (!confirm((activo?"Desactivar":"Reactivar") + " sector " + nom + "?")) return;
+    await fetch(`${SB}/rest/v1/sectores?id=eq.${id}`, { method:"PATCH", headers:H, body:JSON.stringify({ activo:!activo }) });
+    cargar(); setMsg((activo?"🚫":"✅") + " Sector " + (activo?"desactivado":"reactivado")); setTimeout(()=>setMsg(""),3000);
   };
 
   const agregarValet = async () => {
@@ -79,7 +83,7 @@ export default function ConfigPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={()=>window.location.href="/dueno"} className="text-gray-500 text-2xl">←</button>
+        <button onClick={()=>window.history.back()} className="text-gray-500 text-2xl">←</button>
         <h1 className="text-2xl font-bold text-gray-800">⚙️ Configuración</h1>
       </div>
       {msg&&<div className="bg-blue-100 text-blue-700 p-3 rounded-xl text-sm mb-4">{msg}</div>}
@@ -98,7 +102,11 @@ export default function ConfigPage() {
           {vals.filter((v:any)=>v.rol==="valet").map((v:any) => (
             <div key={v.id} className={`border rounded-xl p-3 flex items-center justify-between ${v.activo===false?"border-red-200 bg-red-50":"border-gray-200"}`}>
               <div><p className="font-semibold text-gray-700">{v.nombre} #{v.numero_valet}</p><p className="text-xs text-gray-400">PIN: {v.pin||"—"} {v.activo===false?"· 🔴 Inactivo":""}</p></div>
-              {v.activo!==false&&<><button onClick={()=>desactivarValet(v.id,v.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-200">🚫 Desactivar</button><button onClick={()=>eliminarValetDef(v.id,v.nombre)} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-200 ml-1">🗑️</button></>}
+              <div className="flex gap-1">
+                {v.activo!==false&&<button onClick={()=>accionValet(v.id,v.nombre,"desactivar")} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🚫</button>}
+                {v.activo===false&&<button onClick={()=>accionValet(v.id,v.nombre,"reactivar")} className="bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold">✅ Reactivar</button>}
+                <button onClick={()=>accionValet(v.id,v.nombre,"eliminar")} className="bg-red-100 text-red-600 px-2.5 py-1.5 rounded-lg text-xs font-semibold">🗑️</button>
+              </div>
             </div>
           ))}
         </div>
@@ -114,10 +122,10 @@ export default function ConfigPage() {
       </div>
 
       <div className="bg-white rounded-2xl shadow p-4 mb-4">
-        <h2 className="font-bold text-gray-700 mb-3">🅿️ Sectores ({secs.length})</h2>
+        <h2 className="font-bold text-gray-700 mb-3">🅿️ Sectores ({secs.filter((s:any)=>s.activo).length} activos)</h2>
         <div className="space-y-2 mb-4">
           {secs.map((s:any) => (
-            <div key={s.id} className="border border-gray-200 rounded-xl p-3">
+            <div key={s.id} className={`border rounded-xl p-3 ${!s.activo?"border-red-200 bg-red-50":"border-gray-200"}`}>
               {edS===s.id ? (
                 <div className="space-y-2">
                   <input value={eNom} onChange={e=>setENom(e.target.value)} className="w-full p-2 border rounded-lg text-sm" />
@@ -127,16 +135,16 @@ export default function ConfigPage() {
                     <input type="number" value={eOrd} onChange={e=>setEOrd(parseInt(e.target.value))} className="p-2 border rounded-lg text-sm" />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={()=>guardarSector(s.id)} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex-1">💾</button>
+                    <button onClick={()=>guardarSector(s.id)} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm flex-1">💾 Guardar</button>
                     <button onClick={()=>setEdS("")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm">Cancelar</button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <span className="w-6 h-6 rounded-full" style={{backgroundColor:s.color_hex}} />
-                  <div className="flex-1"><p className="font-semibold text-gray-700">{s.nombre}</p><p className="text-xs text-gray-400">Cap:{s.capacidad}</p></div>
-                  <button onClick={()=>{setEdS(s.id);setENom(s.nombre);setECap(s.capacidad);setECol(s.color_hex);setEOrd(s.orden);}} className="text-blue-600 text-sm font-semibold">Editar</button>
-                  <button onClick={()=>eliminarSector(s.id,s.nombre)} className="text-red-500 text-sm">🗑️</button>
+                  <div className="flex-1"><p className="font-semibold text-gray-700">{s.nombre}</p><p className="text-xs text-gray-400">Cap:{s.capacidad} {!s.activo?"· 🔴 Inactivo":""}</p></div>
+                  {s.activo&&<button onClick={()=>{setEdS(s.id);setENom(s.nombre);setECap(s.capacidad);setECol(s.color_hex);setEOrd(s.orden);}} className="text-blue-600 text-sm font-semibold">Editar</button>}
+                  <button onClick={()=>toggleSector(s.id,s.nombre,s.activo)} className={`text-sm font-semibold ${s.activo?"text-red-500":"text-green-600"}`}>{s.activo?"🚫":"✅"}</button>
                 </div>
               )}
             </div>
