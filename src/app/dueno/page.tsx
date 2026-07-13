@@ -26,7 +26,7 @@ export default function DuenoPage() {
     const th = await q(`${SB}/rest/v1/tickets?select=id&hora_entrada=gte.${hoy}`);
     setTotHoy(Array.isArray(th)?th.length:0);
     // Historial auditoría
-    const h = await q(`${SB}/rest/v1/historial_completo?select=id,tipo,id_valet,id_ticket,id_evento,creado_en&order=creado_en.desc&limit=30`);
+    const h = await q(`${SB}/rest/v1/historial_completo?select=id,tipo,id_valet,id_ticket,id_evento,creado_en&order=creado_en.desc&limit=30order=creado_en.desc`);
     if (Array.isArray(h)) {
       const enr = await Promise.all(h.map(async (x:any) => {
         const p = await q(`${SB}/rest/v1/perfiles?select=nombre&id=eq.${x.id_valet}`);
