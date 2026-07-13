@@ -56,8 +56,8 @@ export default function LoginPage() {
   const iCls = "w-full p-5 text-xl border-2 rounded-2xl bg-white/20 border-white/30 text-white placeholder-gray-400 focus:border-yellow-400 focus:outline-none";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-6">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center px-4 py-8">
+      <div className="w-full max-w-lg mx-auto">
         <div className="text-center mb-8">
           <img src="/logo.png" alt="Valet Parking" className="w-32 h-32 mx-auto mb-4" />
           <h1 className="text-4xl font-bold text-white tracking-tight">Valet Parking</h1>
