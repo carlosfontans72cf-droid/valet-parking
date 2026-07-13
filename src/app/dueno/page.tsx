@@ -69,9 +69,28 @@ export default function DuenoPage() {
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "historial.csv"; a.click();
   };
 
-  // Group by ticket for vehicle route
-  const histByTicket: Record<string, any[]> = {};
-  hist.forEach((h: any) => { const key = h.tn ? "#" + h.tn : "otros"; if (!histByTicket[key]) histByTicket[key] = []; histByTicket[key].push(h); });
+  // Group by ticket for vehicle route - keep IDs for delete
+  const histByTicket: Record<string, { items: any[], idTicket: string, idEvento: string }> = {};
+  hist.forEach((h: any) => {
+    const key = h.tn ? "#" + h.tn : "otros";
+    if (!histByTicket[key]) histByTicket[key] = { items: [], idTicket: h.id_ticket, idEvento: h.id_evento };
+    histByTicket[key].items.push(h);
+  });
+
+  const eliminarVehiculo = async (ticketKey: string, idTicket: string) => {
+    if (!confirm(`Eliminar ${ticketKey}?`) || !confirm("Confirmar?")) return;
+    await act(`${SB}/rest/v1/historial_completo?id_ticket=eq.${idTicket}`, "DELETE");
+    await act(`${SB}/rest/v1/tickets?id=eq.${idTicket}`, "DELETE");
+    setMsg("🗑️ " + ticketKey + " eliminado"); setTimeout(() => setMsg(""), 2000); cargar();
+  };
+
+  const limpiarEvento = async (idEvento: string, nom: string) => {
+    if (!confirm(`Limpiar TODOS los vehículos de "${nom}"?`) || !confirm("Confirmar?")) return;
+    const tkts = await api(`${SB}/rest/v1/tickets?select=id&id_evento=eq.${idEvento}`);
+    for (const t of tkts) await act(`${SB}/rest/v1/historial_completo?id_ticket=eq.${t.id}`, "DELETE");
+    await act(`${SB}/rest/v1/tickets?id_evento=eq.${idEvento}`, "DELETE");
+    setMsg("🗑️ " + nom + " limpiado"); setTimeout(() => setMsg(""), 2000); cargar();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" style={{ maxWidth: 640, margin: "0 auto" }}>
@@ -123,8 +142,8 @@ export default function DuenoPage() {
       {/* RECORRIDO POR VEHÍCULO - TODO EN UNA SOLA LÍNEA */}
       {verRecorrido && (
         <div>
-          {Object.entries(histByTicket).filter(([k]) => k !== "otros").sort().reverse().slice(0, 30).map(([ticket, items]) => {
-            const sorted = items.sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime());
+          {Object.entries(histByTicket).filter(([k]) => k !== "otros").sort().reverse().slice(0, 30).map(([ticket, grupo]) => {
+            const sorted = grupo.items.sort((a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime());
             const label = (h: any) => {
               if (h.tipo === "entrada") return "ENTRADA";
               if (h.tipo === "cambio_sector") return "REUBICÓ";
@@ -147,8 +166,8 @@ export default function DuenoPage() {
                       </span>
                     ))}
                   </div>
+                  <button onClick={() => eliminarVehiculo(ticket, grupo.idTicket)} className="text-red-400 hover:text-red-600 text-lg flex-shrink-0 ml-1" title="Eliminar vehículo">🗑️</button>
                 </div>
-                {/* Detalles extra opcional: sectores */}
                 {sorted.some(h => h.sectorHasta) && (
                   <div className="text-[10px] text-gray-400 mt-1 ml-7">
                     {sorted.filter(h => h.sectorHasta).map((h: any, i: number) => (
@@ -167,14 +186,22 @@ export default function DuenoPage() {
         </div>
       )}
 
-      {/* POR EVENTO - con detalles de sector */}
+      {/* POR EVENTO - con detalles de sector y boton limpiar */}
       {!verRecorrido && (
         <div>
-          {Object.entries(hist.reduce((acc: any, h: any) => { const k = h.en || "General"; if (!acc[k]) acc[k] = []; acc[k].push(h); return acc; }, {})).slice(0, 5).map(([eventName, items]: [string, any]) => (
+          {Object.entries(hist.reduce((acc: any, h: any) => {
+            const k = h.en || "General";
+            if (!acc[k]) acc[k] = { items: [], idEvento: h.id_evento };
+            acc[k].items.push(h);
+            return acc;
+          }, {})).slice(0, 5).map(([eventName, grupo]: [string, any]) => (
             <div key={eventName} className="bg-white rounded-2xl shadow p-4 mb-3">
-              <p className="font-bold mb-2 text-purple-700">📋 {eventName} ({items.length})</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-bold text-purple-700">📋 {eventName} ({grupo.items.length})</p>
+                {grupo.idEvento && <button onClick={() => limpiarEvento(grupo.idEvento, eventName)} className="text-red-400 hover:text-red-600 text-sm" title="Limpiar todos los vehículos del evento">🗑️ Limpiar</button>}
+              </div>
               <div className="max-h-40 overflow-y-auto space-y-1">
-                {items.slice(0, 30).map((h: any) => (
+                {grupo.items.slice(0, 30).map((h: any) => (
                   <div key={h.id} className="flex items-center gap-2 p-1.5 text-xs border-b border-gray-100">
                     <span>{h.tipo === "entrada" ? "🚗" : h.tipo === "retiro_entregado" ? "✅" : h.tipo === "cambio_sector" ? "🔄" : "📍"}</span>
                     {h.tn && <span className="font-bold">#{h.tn}</span>}
@@ -185,7 +212,7 @@ export default function DuenoPage() {
                   </div>
                 ))}
               </div>
-              <button onClick={() => { let t = "📋 " + eventName + "\n"; items.slice(0, 30).forEach((h: any) => { t += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + " " + new Date(h.creado_en).toLocaleTimeString() + "\n"; }); wp(t); }} className="text-green-600 text-xs mt-2 font-semibold">💬 Compartir</button>
+              <button onClick={() => { let t = "📋 " + eventName + "\n"; grupo.items.slice(0, 30).forEach((h: any) => { t += (h.tn ? "#" + h.tn + " " : "") + h.tipo.toUpperCase() + " - " + h.vn + " " + new Date(h.creado_en).toLocaleTimeString() + "\n"; }); wp(t); }} className="text-green-600 text-xs mt-2 font-semibold">💬 Compartir</button>
             </div>
           ))}
         </div>
