@@ -37,7 +37,7 @@ export default function ValetMenu() {
   return (
     <div className="min-h-screen bg-gray-900 p-4 flex flex-col">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2"><img src="/logo.png" alt="" className="w-7 h-7" /><div><p className="text-blue-400 text-sm">🔑 #{vnum}</p><p className="text-white text-xl font-bold">{vn || "Valet"}</p></div></div>
+        <div><p className="text-blue-400 text-sm">🔑 #{vnum}</p><p className="text-white text-xl font-bold">{vn || "Valet"}</p></div>
         <button onClick={() => { localStorage.clear(); window.location.href = "/"; }} className="text-gray-400 text-sm">Salir</button>
       </div>
       <div className="mb-4">

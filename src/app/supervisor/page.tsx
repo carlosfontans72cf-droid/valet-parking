@@ -52,12 +52,9 @@ export default function SupervisorPage() {
     <div className="min-h-screen bg-gray-900 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="" className="w-8 h-8" />
-            <div>
-              <h1 className="text-2xl font-bold text-white">👁️ Admin</h1>
-              <p className="text-gray-400 text-sm">{uName}</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">👁️ Admin</h1>
+            <p className="text-gray-400 text-sm">{uName}</p>
           </div>
           <div className="flex gap-1 flex-wrap">
             <button onClick={() => window.location.href = "/dashboard"} className="bg-gray-700 text-white px-2.5 py-1.5 rounded-xl text-xs">📊</button>

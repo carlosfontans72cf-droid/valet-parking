@@ -59,7 +59,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg mx-auto">
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="Valet Parking" className="w-32 h-32 mx-auto mb-4" />
+          <div className="text-6xl mb-4">🚗</div>
           <h1 className="text-4xl font-bold text-white tracking-tight">Valet Parking</h1>
         </div>
         <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 shadow-2xl">
