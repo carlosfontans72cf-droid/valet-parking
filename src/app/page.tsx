@@ -47,62 +47,63 @@ export default function LoginPage() {
     } catch { setErr("Error"); }
     setBusy(false);
   };
-  const iCls = "w-full p-5 text-xl border-2 rounded-2xl bg-white/20 border-white/30 text-white placeholder-gray-400 focus:border-yellow-400 focus:outline-none";
+  const iCls = "w-full p-4 text-lg border-2 rounded-xl bg-white/20 border-white/30 text-white placeholder-gray-400 focus:border-yellow-400 focus:outline-none";
+  const labelCls = "block text-white text-lg font-medium mb-2";
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center px-4 py-8">
-      <div className="w-full max-w-lg mx-auto">
+      <div className="w-full max-w-md mx-auto">
         <div className="text-center mb-8">
-          <div className="text-6xl mb-4">🚗</div>
+          <div className="text-6xl mb-2">🚗</div>
           <h1 className="text-4xl font-bold text-white tracking-tight">Valet Parking</h1>
         </div>
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 shadow-2xl">
+
+        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 shadow-2xl">
           
-          {/* Pestañas de Rol ARRIBA, una al lado de la otra */}
+          {/* Pestañas arriba */}
           <div className="flex gap-2 mb-8">
             {[["valet","🔑 Valet","bg-blue-600"],["supervisor","👁️ Admin","bg-green-600"],["dueno","👑 Dueño","bg-purple-600"]].map(([k,l,c]) => (
               <button key={k} onClick={() => { setTab(k); setErr(""); setPin(""); setShowList(false); }}
-                className={`flex-1 py-4 px-2 rounded-2xl text-base font-semibold ${tab===k?`${c} text-white shadow-lg scale-105`:"bg-white/20 text-gray-300"}`}>{l}</button>
+                className={`flex-1 py-3 px-2 rounded-xl text-base font-semibold ${tab===k?`${c} text-white shadow-lg`:"bg-white/20 text-gray-300"}`}>{l}</button>
             ))}
           </div>
 
-          {/* Campo NOMBRE — ancho completo */}
-          <div className="mb-4">
-            <div className="flex gap-2">
-              <input type="text" value={nombre} onChange={e=>setNombre(e.target.value)} className={iCls} placeholder="Nombre" required />
-              <button type="button" onClick={()=>setShowList(!showList)} className="px-5 bg-white/20 text-white rounded-2xl text-xl hover:bg-white/30">👤</button>
-            </div>
+          {/* CAMPO NOMBRE */}
+          <label className={labelCls}>Nombre</label>
+          <div className="flex gap-2 mb-5">
+            <input type="text" value={nombre} onChange={e=>setNombre(e.target.value)} className={iCls} placeholder="Tu nombre" required />
+            <button type="button" onClick={()=>setShowList(!showList)} className="px-4 bg-white/20 text-white rounded-xl hover:bg-white/30">👤</button>
           </div>
 
-          {/* Lista de usuarios si se abre */}
+          {/* Lista de usuarios */}
           {showList && filteredUsers.length > 0 && (
-            <div className="mb-4 bg-white/5 rounded-xl p-2 max-h-52 overflow-y-auto">
+            <div className="mb-5 bg-white/5 rounded-xl p-2 max-h-52 overflow-y-auto">
               {filteredUsers.map((u: any) => (
                 <button key={u.id} onClick={() => selectUser(u.nombre)}
-                  className="w-full text-left px-4 py-3 rounded-xl text-base text-white hover:bg-white/10 mb-0.5">
+                  className="w-full text-left px-4 py-3 rounded-lg text-base text-white hover:bg-white/10">
                   👤 {u.nombre} {u.rol === "dueno" ? "(Dueño)" : u.rol === "supervisor" ? "(Admin)" : "(Valet #" + u.numero_valet + ")"}
                 </button>
               ))}
             </div>
           )}
 
-          {/* Campo APELLIDO — debajo de Nombre, ancho completo */}
-          <div className="mb-4">
-            <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={iCls} placeholder="Apellido" required />
+          {/* CAMPO APELLIDO */}
+          <label className={labelCls}>Apellido</label>
+          <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={`${iCls} mb-5`} placeholder="Tu apellido" required />
+
+          {/* CAMPO PIN */}
+          <label className={labelCls}>PIN</label>
+          <div className="relative mb-8">
+            <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={`${iCls} pr-12`} placeholder="Tu PIN" maxLength={6} required />
+            <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">{showPin?"🙈":"👁️"}</button>
           </div>
 
-          {/* Campo PIN — debajo de Apellido, ancho completo */}
-          <div className="relative mb-6">
-            <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={iCls+" pr-14"} placeholder="PIN" maxLength={6} required />
-            <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-2xl">{showPin?"🙈":"👁️"}</button>
-          </div>
+          {/* Error */}
+          {err && <div className="bg-red-500/20 text-red-300 p-3 rounded-xl text-center mb-6">{err}</div>}
 
-          {/* Mensaje de error */}
-          {err && <div className="bg-red-500/20 text-red-300 p-4 rounded-2xl text-base text-center mb-6">{err}</div>}
-
-          {/* BOTÓN INGRESAR — ABAJO, ancho completo, grande */}
+          {/* BOTÓN INGRESAR — ancho completo, grande abajo */}
           <form onSubmit={login}>
-            <button type="submit" disabled={busy} className="w-full py-6 rounded-2xl text-white font-bold text-2xl bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50 shadow-lg active:scale-95">
-              {busy ? "⏳" : "🚀 INGRESAR"}
+            <button type="submit" disabled={busy} className="w-full py-4 rounded-xl text-white font-bold text-xl bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50 shadow-lg hover:brightness-105 active:scale-98">
+              {busy ? "⏳ Cargando..." : "🚀 INGRESAR"}
             </button>
           </form>
 
