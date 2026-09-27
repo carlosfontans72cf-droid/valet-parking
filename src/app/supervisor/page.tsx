@@ -1,8 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
-const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen", BH = { apikey: AK, Authorization: `Bearer ${AK}` };
-const q = async (u: string) => { try { const r = await fetch(u, { headers: BH }); const t = await r.text(); return t && t !== "[]" ? JSON.parse(t) : []; } catch { return []; } };
+import { api as q } from "@/lib/api";
 
 export default function SupervisorPage() {
   const [eventos, setEventos] = useState<any[]>([]);
@@ -28,13 +27,13 @@ export default function SupervisorPage() {
 
   const cargar = async () => {
     try {
-      const evs = await q(`${SB}/rest/v1/eventos?select=id,nombre,vehiculos_totales&estado=eq.abierto`);
+      const evs = await q(`eventos?select=id,nombre,vehiculos_totales&estado=eq.abierto`);
       setEventos(Array.isArray(evs) ? evs : []);
       const evIds = Array.isArray(evs) && evs.length ? evs.map((e: any) => e.id).join(",") : "";
       if (evIds) {
-        setTotalActivos((await q(`${SB}/rest/v1/tickets?select=id&estado=eq.activo&id_evento=in.(${evIds})`)).length);
+        setTotalActivos((await q(`tickets?select=id&estado=eq.activo&id_evento=in.(${evIds})`)).length);
         const hoy = new Date().toISOString().split("T")[0];
-        setTotalHoy((await q(`${SB}/rest/v1/tickets?select=id&hora_entrada=gte.${hoy}&id_evento=in.(${evIds})`)).length);
+        setTotalHoy((await q(`tickets?select=id&hora_entrada=gte.${hoy}&id_evento=in.(${evIds})`)).length);
       }
       setError("");
     } catch (e) { setError("Error al cargar datos"); }

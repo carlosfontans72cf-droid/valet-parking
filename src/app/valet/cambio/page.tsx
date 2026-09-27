@@ -1,8 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
-const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen";
-const q = async (u: string) => { try { const r = await fetch(u, { headers: { apikey: AK, Authorization: `Bearer ${AK}` } }); return await r.json(); } catch { return null; } };
+import { api as q, act } from "@/lib/api";
 
 export default function CambioPage() {
   const [n, setN] = useState("");
@@ -15,16 +14,16 @@ export default function CambioPage() {
   const valetId = typeof window !== 'undefined' ? localStorage.getItem("valetId") : null;
 
   useEffect(() => {
-    q(`${SB}/rest/v1/sectores?select=id,nombre,color_hex&activo=eq.true&order=orden`).then(d => { if (Array.isArray(d)) setS(d); });
+    q(`sectores?select=id,nombre,color_hex&activo=eq.true&order=orden`).then(d => { if (Array.isArray(d)) setS(d); });
   }, []);
 
   const buscar = async () => {
     setErr(""); setT(null); setNs("");
     if (!n||!eventoId) { setErr("Falta número o evento"); return; }
-    const d = await q(`${SB}/rest/v1/tickets?select=id,numero_ticket,id_sector,ubicacion_exacta,estado_llave,hora_entrada,id_evento&numero_ticket=eq.${n}&id_evento=eq.${eventoId}&estado=eq.activo`);
+    const d = await q(`tickets?select=id,numero_ticket,id_sector,ubicacion_exacta,estado_llave,hora_entrada,id_evento&numero_ticket=eq.${n}&id_evento=eq.${eventoId}&estado=eq.activo`);
     if (!Array.isArray(d)||!d.length) { setErr("No encontrado en este evento"); return; }
     // Traer historial también
-    const hist = await q(`${SB}/rest/v1/historial_completo?select=id,tipo,id_valet,creado_en,detalles&id_ticket=eq.${d[0].id}&order=creado_en.asc`);
+    const hist = await q(`historial_completo?select=id,tipo,id_valet,creado_en,detalles&id_ticket=eq.${d[0].id}&order=creado_en.asc`);
     setT({...d[0], hist: Array.isArray(hist)?hist:[]});
   };
 
@@ -33,9 +32,9 @@ export default function CambioPage() {
     try {
       const sectorNuevo = s.find(x => x.id === ns);
       const sectorActual = s.find(x => x.id === t.id_sector);
-      await fetch(`${SB}/rest/v1/tickets?id=eq.${t.id}`, { method:"PATCH", headers:{"Content-Type":"application/json",apikey:AK,Authorization:`Bearer ${AK}`}, body:JSON.stringify({ id_sector:ns }) });
+      await act(`tickets?id=eq.${t.id}`, "PATCH", { id_sector: ns });
       // Registrar en historial
-      await fetch(`${SB}/rest/v1/historial_completo`, { method:"POST", headers:{"Content-Type":"application/json",apikey:AK,Authorization:`Bearer ${AK}`}, body:JSON.stringify({ id_ticket:t.id, id_evento:t.id_evento, id_valet:valetId, tipo:"cambio_sector", detalles:{ sector_anterior:sectorActual?.nombre||"", sector_nuevo:sectorNuevo?.nombre||"" } }) });
+      await act(`historial_completo`, "POST", { id_ticket: t.id, id_evento: t.id_evento, id_valet: valetId, tipo: "cambio_sector", detalles: { sector_anterior: sectorActual?.nombre || "", sector_nuevo: sectorNuevo?.nombre || "" } });
       setOk("✅ Cambiado!"); setTimeout(()=>{setT(null);setN("");setNs("");setOk("");},1500);
     } catch { setErr("Error"); }
   };

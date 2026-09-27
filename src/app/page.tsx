@@ -1,114 +1,175 @@
 "use client";
-import { useState, useEffect } from "react";
-const SB = "https://hzexxoazyhhvljqiummn.supabase.co/rest/v1/", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen", H = { apikey: AK, Authorization: `Bearer ${AK}` };
-const q = async (u: string) => { try { const r = await fetch(u, { headers: H }); return await r.json(); } catch { return null; } };
-export default function LoginPage() {
-  const [tab, setTab] = useState("valet");
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [pin, setPin] = useState("");
-  const [showPin, setShowPin] = useState(false);
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
-  const [showList, setShowList] = useState(false);
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useAppStore } from "@/lib/store";
+
+type Solicitud = {
+  id: string; estado: string; ticket_num: number; patente: string; modelo: string;
+  sector_nombre: string; sector_color: string; ubicacion: string; estado_llave: string;
+  hora_entrada: string; solicitado_en: string;
+};
+
+export default function SolicitudesPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const perfil = useAppStore((s) => s.perfil);
+
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-    localStorage.clear();
-    q(`${SB}perfiles?select=id,nombre,rol,numero_valet&activo=eq.true`).then(d => { if (Array.isArray(d)) setUsers(d); });
+    if (!perfil) { router.push("/valet"); return; }
+    cargarSolicitudes();
+    const canal = supabase
+      .channel("solicitudes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "solicitudes_retiro", filter: `id_valet_asignado=eq.${perfil.id}` }, () => cargarSolicitudes())
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
   }, []);
-  const selectUser = (nom: string) => {
-    const p = nom.split(" ");
-    setNombre(p[0] || "");
-    setApellido(p.slice(1).join(" ") || "");
-    setShowList(false);
-    setErr("");
-  };
-  const filteredUsers = users.filter((u: any) => tab === "valet" ? u.rol === "valet" : u.rol !== "valet");
-  const login = async (e: any) => {
-    e.preventDefault();
-    setErr(""); setBusy(true);
-    const nomCompleto = (nombre.trim() + " " + apellido.trim()).trim();
-    if (!nombre.trim() || !apellido.trim() || !pin) { setErr("Completá todo"); setBusy(false); return; }
-    try {
-      const d = await q(`${SB}perfiles?select=id,nombre,rol,numero_valet&nombre=eq.${encodeURIComponent(nomCompleto)}&pin=eq.${pin}&activo=eq.true`);
-      if (!Array.isArray(d) || !d.length) { setErr("Nombre o PIN incorrecto"); setBusy(false); return; }
-      const u = d[0];
-      localStorage.setItem("userName", u.nombre);
-      localStorage.setItem("userId", u.id);
-      if (u.rol === "valet") {
-        localStorage.setItem("valetId", u.id);
-        localStorage.setItem("valetNombre", u.nombre);
-        localStorage.setItem("valetNumero", String(u.numero_valet || ""));
-        window.location.href = "/valet";
-      } else {
-        localStorage.setItem("token", "ok");
-        window.location.href = u.rol === "supervisor" ? "/supervisor" : "/dueno";
+
+  async function cargarSolicitudes() {
+    const { data } = await supabase
+      .from("solicitudes_retiro")
+      .select(`*, tickets!inner(numero_ticket, ubicacion_exacta, estado_llave, hora_entrada, 
+        vehiculos!inner(patente, modelo),
+        sectores!inner(nombre, color_hex))`)
+      .eq("id_valet_asignado", perfil?.id)
+      .in("estado", ["pendiente", "en_camino", "recogiendo"])
+      .order("solicitado_en", { ascending: true });
+
+    if (data) {
+      const sols: Solicitud[] = data.map((s: any) => ({
+        id: s.id, estado: s.estado,
+        ticket_num: s.tickets?.numero_ticket || 0,
+        patente: s.tickets?.vehiculos?.patente || "",
+        modelo: s.tickets?.vehiculos?.modelo || "",
+        sector_nombre: s.tickets?.sectores?.nombre || "",
+        sector_color: s.tickets?.sectores?.color_hex || "#666",
+        ubicacion: s.tickets?.ubicacion_exacta || "",
+        estado_llave: s.tickets?.estado_llave || "",
+        hora_entrada: s.tickets?.hora_entrada || "",
+        solicitado_en: s.solicitado_en,
+      }));
+      setSolicitudes(sols);
+    }
+  }
+
+  const accion = async (id: string, nuevoEstado: string, campoFecha: string) => {
+    setLoading((prev) => ({ ...prev, [id]: true }));
+    await supabase.from("solicitudes_retiro").update({
+      estado: nuevoEstado,
+      [campoFecha]: new Date().toISOString(),
+    }).eq("id", id);
+
+    if (nuevoEstado === "completado") {
+      // Actualizar ticket
+      const sol = solicitudes.find((s) => s.id === id);
+      if (sol) {
+        const { data: ticket } = await supabase.from("solicitudes_retiro").select("id_ticket").eq("id", id).single();
+        if (ticket) {
+          const ahora = new Date().toISOString();
+          const { data: tkt } = await supabase.from("tickets").select("hora_entrada").eq("id", ticket.id_ticket).single();
+          const tiempoSeg = tkt ? Math.round((Date.now() - new Date(tkt.hora_entrada).getTime()) / 1000) : 0;
+          await supabase.from("tickets").update({
+            estado: "completado",
+            hora_salida: ahora,
+            id_valet_salida: perfil!.id,
+            tiempo_espera_seg: tiempoSeg,
+          }).eq("id", ticket.id_ticket);
+
+          // Historial
+          await supabase.from("historial_completo").insert({
+            id_ticket: ticket.id_ticket,
+            id_evento: (await supabase.from("tickets").select("id_evento").eq("id", ticket.id_ticket).single()).data?.id_evento,
+            id_valet: perfil!.id,
+            tipo: "retiro_entregado",
+            detalles: { tiempo_seg: tiempoSeg },
+          });
+        }
       }
-    } catch { setErr("Error"); }
-    setBusy(false);
+    }
+    setLoading((prev) => ({ ...prev, [id]: false }));
+    cargarSolicitudes();
   };
-  const iCls = "w-full p-4 text-lg border-2 rounded-xl bg-white/20 border-white/30 text-white placeholder-gray-400 focus:border-yellow-400 focus:outline-none";
-  const labelCls = "block text-white text-lg font-medium mb-2";
+
+  const iconoLLave = (llave: string) => {
+    if (llave === "colgada") return "🔑 Colgada";
+    if (llave === "cajon") return "📁 Cajón";
+    return "👤 Dueño";
+  };
+
+  if (!perfil) return null;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md mx-auto">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-2">🚗</div>
-          <h1 className="text-4xl font-bold text-white tracking-tight">Valet Parking</h1>
-        </div>
-
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 shadow-2xl">
-          
-          {/* Pestañas arriba */}
-          <div className="flex gap-2 mb-8">
-            {[["valet","🔑 Valet","bg-blue-600"],["supervisor","👁️ Admin","bg-green-600"],["dueno","👑 Dueño","bg-purple-600"]].map(([k,l,c]) => (
-              <button key={k} onClick={() => { setTab(k); setErr(""); setPin(""); setShowList(false); }}
-                className={`flex-1 py-3 px-2 rounded-xl text-base font-semibold ${tab===k?`${c} text-white shadow-lg`:"bg-white/20 text-gray-300"}`}>{l}</button>
-            ))}
-          </div>
-
-          {/* CAMPO NOMBRE */}
-          <label className={labelCls}>Nombre</label>
-          <div className="flex gap-2 mb-5">
-            <input type="text" value={nombre} onChange={e=>setNombre(e.target.value)} className={iCls} placeholder="Tu nombre" required />
-            <button type="button" onClick={()=>setShowList(!showList)} className="px-4 bg-white/20 text-white rounded-xl hover:bg-white/30">👤</button>
-          </div>
-
-          {/* Lista de usuarios */}
-          {showList && filteredUsers.length > 0 && (
-            <div className="mb-5 bg-white/5 rounded-xl p-2 max-h-52 overflow-y-auto">
-              {filteredUsers.map((u: any) => (
-                <button key={u.id} onClick={() => selectUser(u.nombre)}
-                  className="w-full text-left px-4 py-3 rounded-lg text-base text-white hover:bg-white/10">
-                  👤 {u.nombre} {u.rol === "dueno" ? "(Dueño)" : u.rol === "supervisor" ? "(Admin)" : "(Valet #" + u.numero_valet + ")"}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* CAMPO APELLIDO */}
-          <label className={labelCls}>Apellido</label>
-          <input type="text" value={apellido} onChange={e=>setApellido(e.target.value)} className={`${iCls} mb-5`} placeholder="Tu apellido" required />
-
-          {/* CAMPO PIN */}
-          <label className={labelCls}>PIN</label>
-          <div className="relative mb-8">
-            <input type={showPin?"text":"password"} value={pin} onChange={e=>setPin(e.target.value)} className={`${iCls} pr-12`} placeholder="Tu PIN" maxLength={6} required />
-            <button type="button" onClick={()=>setShowPin(!showPin)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">{showPin?"🙈":"👁️"}</button>
-          </div>
-
-          {/* Error */}
-          {err && <div className="bg-red-500/20 text-red-300 p-3 rounded-xl text-center mb-6">{err}</div>}
-
-          {/* BOTÓN INGRESAR — ancho completo, grande abajo */}
-          <form onSubmit={login}>
-            <button type="submit" disabled={busy} className="w-full py-4 rounded-xl text-white font-bold text-xl bg-gradient-to-r from-blue-600 to-blue-700 disabled:opacity-50 shadow-lg hover:brightness-105 active:scale-98">
-              {busy ? "⏳ Cargando..." : "🚀 INGRESAR"}
-            </button>
-          </form>
-
-        </div>
+    <div className="min-h-screen bg-gray-900 p-4 pb-8">
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => router.push("/valet")} className="text-gray-400 text-2xl">←</button>
+        <h1 className="text-white text-xl font-bold">📋 Solicitudes</h1>
+        <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">{solicitudes.length}</span>
       </div>
+
+      {solicitudes.length === 0 ? (
+        <div className="text-center py-20">
+          <span className="text-6xl block mb-4">✅</span>
+          <p className="text-gray-400">No tenés solicitudes pendientes</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-w-lg mx-auto">
+          {solicitudes.map((sol) => (
+            <div key={sol.id} className="bg-gray-800 rounded-2xl p-4 animate-fade-in">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="text-white font-bold text-lg">🎫 #{String(sol.ticket_num).padStart(3, "0")}</p>
+                  <p className="text-gray-300 font-semibold">{sol.patente} {sol.modelo && `· ${sol.modelo}`}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                  sol.estado === "pendiente" ? "bg-yellow-900 text-yellow-300" :
+                  sol.estado === "en_camino" ? "bg-blue-900 text-blue-300" :
+                  "bg-green-900 text-green-300"
+                }`}>
+                  {sol.estado === "pendiente" ? "Pendiente" : sol.estado === "en_camino" ? "En camino" : "Recogiendo"}
+                </span>
+              </div>
+
+              <div className="bg-gray-900 rounded-xl p-3 space-y-1 text-sm mb-3">
+                <p className="text-gray-300">
+                  🅿️ <span style={{ color: sol.sector_color }}>{sol.sector_nombre}</span>
+                </p>
+                <p className="text-gray-400">📍 {sol.ubicacion}</p>
+                <p className="text-gray-400">{iconoLLave(sol.estado_llave)}</p>
+                <p className="text-gray-500 text-xs">⏳ Entrada: {new Date(sol.hora_entrada).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</p>
+              </div>
+
+              {/* Botones según estado */}
+              <div className="grid grid-cols-3 gap-2">
+                {sol.estado === "pendiente" && (
+                  <button onClick={() => accion(sol.id, "en_camino", "en_camino_desde")}
+                    disabled={loading[sol.id]}
+                    className="btn-valet-sm bg-blue-600 hover:bg-blue-700 col-span-3 py-4 text-lg disabled:opacity-50">
+                    🚶 EN CAMINO
+                  </button>
+                )}
+                {sol.estado === "en_camino" && (
+                  <button onClick={() => accion(sol.id, "recogiendo", "recogido_en")}
+                    disabled={loading[sol.id]}
+                    className="btn-valet-sm bg-amber-600 hover:bg-amber-700 col-span-3 py-4 text-lg disabled:opacity-50">
+                    🚗 RECOGÍ EL VEHÍCULO
+                  </button>
+                )}
+                {sol.estado === "recogiendo" && (
+                  <button onClick={() => accion(sol.id, "completado", "completado_en")}
+                    disabled={loading[sol.id]}
+                    className="btn-valet-sm bg-green-600 hover:bg-green-700 col-span-3 py-4 text-lg disabled:opacity-50">
+                    ✅ VEHÍCULO ENTREGADO
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

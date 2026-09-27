@@ -1,8 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
-const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen";
-const q = async (u: string) => { try { const r = await fetch(u, { headers: { apikey: AK, Authorization: `Bearer ${AK}` } }); return await r.json(); } catch { return null; } };
+import { api as q } from "@/lib/api";
 
 export default function TVPage() {
   const [hora, setHora] = useState(new Date());
@@ -17,22 +16,22 @@ export default function TVPage() {
   useEffect(() => { cargar(); const t = setInterval(cargar, 3000); return () => clearInterval(t); }, [evSel]);
 
   const cargar = async () => {
-    const c = await q(`${SB}/rest/v1/configuracion_app?select=nombre_app`);
+    const c = await q(`configuracion_app?select=nombre_app`);
     if (Array.isArray(c) && c.length) setNomApp(c[0].nombre_app);
-    const e = await q(`${SB}/rest/v1/eventos?select=id,nombre,vehiculos_totales&estado=eq.abierto`);
+    const e = await q(`eventos?select=id,nombre,vehiculos_totales&estado=eq.abierto`);
     if (Array.isArray(e)) { setEvs(e); if (!evSel && e.length > 0) setEvSel(e[0].id); }
     const evIds = Array.isArray(e) && e.length ? e.map((x: any) => x.id).join(",") : "";
-    const s = await q(`${SB}/rest/v1/sectores?select=id,nombre,capacidad,color_hex&activo=eq.true&order=orden`);
+    const s = await q(`sectores?select=id,nombre,capacidad,color_hex&activo=eq.true&order=orden`);
     if (Array.isArray(s)) {
       const w = await Promise.all(s.map(async (x: any) => {
-        const t = evIds ? await q(`${SB}/rest/v1/tickets?select=id&id_sector=eq.${x.id}&estado=eq.activo&id_evento=in.(${evIds})`) : [];
+        const t = evIds ? await q(`tickets?select=id&id_sector=eq.${x.id}&estado=eq.activo&id_evento=in.(${evIds})`) : [];
         return { ...x, activos: Array.isArray(t) ? t.length : 0 };
       }));
       setSecs(w);
       setTotal(w.reduce((a: number, b: any) => a + (b.activos || 0), 0));
     }
     if (evSel) {
-      const t = await q(`${SB}/rest/v1/tickets?select=numero_ticket,id_sector,ubicacion_exacta,estado_llave&id_evento=eq.${evSel}&estado=eq.activo&order=numero_ticket`);
+      const t = await q(`tickets?select=numero_ticket,id_sector,ubicacion_exacta,estado_llave&id_evento=eq.${evSel}&estado=eq.activo&order=numero_ticket`);
       if (Array.isArray(t)) setTkts(t.map((x: any) => { const secsArr = secs; const sec = secsArr?.find((y: any) => y.id === x.id_sector); return { ...x, sector_nombre: sec?.nombre || "", sector_color: sec?.color_hex || "#666" }; }));
       else setTkts([]);
     }

@@ -1,8 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-
-function api(path: string) { return fetch("/api/db?path=" + encodeURIComponent(path)).then(r => r.text()).then(t => t && t !== "[]" ? JSON.parse(t) : []).catch(() => []); }
-function act(path: string, m: string, d?: any) { return fetch("/api/db", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, method: m, data: d }) }); }
+import { api, act } from "@/lib/api";
 
 export default function ConfigPage() {
   const [nom, setNom] = useState("");

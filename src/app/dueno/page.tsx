@@ -1,9 +1,7 @@
 "use client";
 export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
-const SB = "https://hzexxoazyhhvljqiummn.supabase.co", AK = "sb_publishable_ALyCDA4qM4T68YiecEQErQ_WoYNUfen", BH = { apikey: AK, Authorization: `Bearer ${AK}` };
-const api = async (u: string) => { try { const r = await fetch(u, { headers: BH }); const t = await r.text(); return t && t !== "[]" ? JSON.parse(t) : []; } catch { return []; } };
-const act = async (u: string, m: string, d?: any) => fetch(u, { method: m, headers: { ...BH, "Content-Type": "application/json" }, body: d ? JSON.stringify(d) : undefined });
+import { api, act } from "@/lib/api";
 
 export default function DuenoPage() {
   const [evs, setEvs] = useState<any[]>([]);
@@ -17,23 +15,23 @@ export default function DuenoPage() {
   const uName = typeof window !== 'undefined' ? localStorage.getItem("userName") || "Dueño" : "";
 
   const cargar = async () => {
-    const c = await api(`${SB}/rest/v1/configuracion_app?limit=1`);
+    const c = await api(`configuracion_app?limit=1`);
     if (c.length) setNomApp(c[0].nombre_app || "Valet Parking");
-    const d = await api(`${SB}/rest/v1/eventos?select=id,nombre,vehiculos_totales,fecha_apertura&estado=eq.abierto&order=fecha_apertura`);
+    const d = await api(`eventos?select=id,nombre,vehiculos_totales,fecha_apertura&estado=eq.abierto&order=fecha_apertura`);
     setEvs(d);
     const evIds = d.length ? d.map((e: any) => e.id).join(",") : "";
     if (evIds) {
-      setTotal((await api(`${SB}/rest/v1/tickets?select=id&estado=eq.activo&id_evento=in.(${evIds})`)).length);
+      setTotal((await api(`tickets?select=id&estado=eq.activo&id_evento=in.(${evIds})`)).length);
       const hoy = new Date().toISOString().split("T")[0];
-      setTotHoy((await api(`${SB}/rest/v1/tickets?select=id&hora_entrada=gte.${hoy}&id_evento=in.(${evIds})`)).length);
+      setTotHoy((await api(`tickets?select=id&hora_entrada=gte.${hoy}&id_evento=in.(${evIds})`)).length);
     } else { setTotal(0); setTotHoy(0); }
-    const h = await api(`${SB}/rest/v1/historial_completo?order=creado_en.desc&limit=300`);
+    const h = await api(`historial_completo?order=creado_en.desc&limit=300`);
     if (h.length) {
       const enr = await Promise.all(h.map(async (x: any) => {
         const [p, tkt, ev] = await Promise.all([
-          api(`${SB}/rest/v1/perfiles?select=nombre&id=eq.${x.id_valet}`),
-          api(`${SB}/rest/v1/tickets?select=numero_ticket&id=eq.${x.id_ticket}`),
-          api(`${SB}/rest/v1/eventos?select=nombre&id=eq.${x.id_evento}`),
+          api(`perfiles?select=nombre&id=eq.${x.id_valet}`),
+          api(`tickets?select=numero_ticket&id=eq.${x.id_ticket}`),
+          api(`eventos?select=nombre&id=eq.${x.id_evento}`),
         ]);
         // Extraer detalles de sector
         let sectorDesde = "", sectorHasta = "";
@@ -50,15 +48,15 @@ export default function DuenoPage() {
   useEffect(() => { cargar(); }, []);
   const crear = async () => {
     if (!nuevo.trim()) return;
-    await act(`${SB}/rest/v1/eventos`, "POST", { nombre: nuevo.trim(), abierto_por: localStorage.getItem("userId") || "" });
+    await act(`eventos`, "POST", { nombre: nuevo.trim(), abierto_por: localStorage.getItem("userId") || "" });
     setNuevo(""); setMsg("Creado"); setTimeout(() => setMsg(""), 2000); cargar();
   };
-  const cerrarEvento = async (id: string) => { if (!confirm("Cerrar?")) return; await act(`${SB}/rest/v1/eventos?id=eq.${id}`, "PATCH", { estado: "cerrado", fecha_cierre: new Date().toISOString() }); cargar(); };
+  const cerrarEvento = async (id: string) => { if (!confirm("Cerrar?")) return; await act(`eventos?id=eq.${id}`, "PATCH", { estado: "cerrado", fecha_cierre: new Date().toISOString() }); cargar(); };
   const eliminarEvento = async (id: string, nom: string) => {
     if (!confirm("ELIMINAR " + nom + "?") || !confirm("Confirmar?")) return;
-    const tkts = await api(`${SB}/rest/v1/tickets?select=id&id_evento=eq.${id}`);
-    for (const t of tkts) await act(`${SB}/rest/v1/historial_completo?id_ticket=eq.${t.id}`, "DELETE");
-    await act(`${SB}/rest/v1/tickets?id_evento=eq.${id}`, "DELETE"); await act(`${SB}/rest/v1/eventos?id=eq.${id}`, "DELETE");
+    const tkts = await api(`tickets?select=id&id_evento=eq.${id}`);
+    for (const t of tkts) await act(`historial_completo?id_ticket=eq.${t.id}`, "DELETE");
+    await act(`tickets?id_evento=eq.${id}`, "DELETE"); await act(`eventos?id=eq.${id}`, "DELETE");
     setMsg("Eliminado"); setTimeout(() => setMsg(""), 3000); cargar();
   };
   const cerrarSesion = () => { localStorage.clear(); window.location.href = "/"; };
@@ -93,16 +91,16 @@ export default function DuenoPage() {
 
   const eliminarVehiculo = async (ticketKey: string, idTicket: string) => {
     if (!confirm(`Eliminar ${ticketKey}?`) || !confirm("Confirmar?")) return;
-    await act(`${SB}/rest/v1/historial_completo?id_ticket=eq.${idTicket}`, "DELETE");
-    await act(`${SB}/rest/v1/tickets?id=eq.${idTicket}`, "DELETE");
+    await act(`historial_completo?id_ticket=eq.${idTicket}`, "DELETE");
+    await act(`tickets?id=eq.${idTicket}`, "DELETE");
     setMsg("🗑️ " + ticketKey + " eliminado"); setTimeout(() => setMsg(""), 2000); cargar();
   };
 
   const limpiarEvento = async (idEvento: string, nom: string) => {
     if (!confirm(`Limpiar TODOS los vehículos de "${nom}"?`) || !confirm("Confirmar?")) return;
-    const tkts = await api(`${SB}/rest/v1/tickets?select=id&id_evento=eq.${idEvento}`);
-    for (const t of tkts) await act(`${SB}/rest/v1/historial_completo?id_ticket=eq.${t.id}`, "DELETE");
-    await act(`${SB}/rest/v1/tickets?id_evento=eq.${idEvento}`, "DELETE");
+    const tkts = await api(`tickets?select=id&id_evento=eq.${idEvento}`);
+    for (const t of tkts) await act(`historial_completo?id_ticket=eq.${t.id}`, "DELETE");
+    await act(`tickets?id_evento=eq.${idEvento}`, "DELETE");
     setMsg("🗑️ " + nom + " limpiado"); setTimeout(() => setMsg(""), 2000); cargar();
   };
 
