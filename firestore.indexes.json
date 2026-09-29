@@ -1,0 +1,89 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "eventos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "fecha_apertura", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "historial_completo",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_ticket", "order": "ASCENDING" },
+        { "fieldPath": "creado_en", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sectores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activo", "order": "ASCENDING" },
+        { "fieldPath": "orden", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "perfiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "nombre", "order": "ASCENDING" },
+        { "fieldPath": "pin", "order": "ASCENDING" },
+        { "fieldPath": "activo", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "id_evento", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_evento", "order": "ASCENDING" },
+        { "fieldPath": "hora_entrada", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_sector", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "id_evento", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "numero_ticket", "order": "ASCENDING" },
+        { "fieldPath": "id_evento", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_evento", "order": "ASCENDING" },
+        { "fieldPath": "numero_ticket", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_evento", "order": "ASCENDING" },
+        { "fieldPath": "estado", "order": "ASCENDING" },
+        { "fieldPath": "numero_ticket", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
