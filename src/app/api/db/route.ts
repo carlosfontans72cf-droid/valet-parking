@@ -16,20 +16,9 @@ import {
 } from "firebase/firestore";
 import { firebaseConfig } from "@/lib/firebaseConfig";
 
-// -----------------------------------------------------------------------
-// Este endpoint reemplaza lo que antes hacía Supabase (PostgREST) directo.
-// Recibe rutas con el mismo formato que ya usaba toda la app:
-//   GET  /api/db?path=tickets?select=id&estado=eq.activo&id_evento=in.(a,b)
-//   POST /api/db  { path: "tickets", method: "POST"|"PATCH"|"DELETE", data }
-// y las traduce a consultas de Firestore. Así no hubo que reescribir cada
-// pantalla, solo este archivo + de dónde apuntan las llamadas.
-// -----------------------------------------------------------------------
-
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Valores por defecto que antes ponía Postgres solo (DEFAULT now(), etc.)
-// Firestore no tiene eso, así que lo completamos acá al crear un documento.
 const DEFAULTS: Record<string, () => Record<string, any>> = {
   perfiles: () => ({ activo: true, creado_en: new Date().toISOString() }),
   eventos: () => ({ estado: "abierto", fecha_apertura: new Date().toISOString(), vehiculos_totales: 0 }),
@@ -48,8 +37,10 @@ const DEFAULTS: Record<string, () => Record<string, any>> = {
   configuracion_app: () => ({ ultima_modificacion: new Date().toISOString() }),
 };
 
-function castValue(raw: string): any {
-  const v = decodeURIComponent(raw);
+const TEXT_FIELDS = new Set(["pin", "patente", "nombre", "color", "modelo", "ubicacion_exacta"]);
+
+function castValue(key: string, v: string): any {
+  if (TEXT_FIELDS.has(key)) return v;
   if (v === "true") return true;
   if (v === "false") return false;
   if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
@@ -84,22 +75,21 @@ function buildConstraints(params: URLSearchParams): QueryConstraint[] {
     const m = rawValue.match(/^(eq|gte|lte|gt|lt|in)\.(.*)$/s);
     if (!m) continue;
     const [, op, val] = m;
-    if (op === "eq") constraints.push(where(key, "==", castValue(val)));
-    else if (op === "gte") constraints.push(where(key, ">=", castValue(val)));
-    else if (op === "lte") constraints.push(where(key, "<=", castValue(val)));
-    else if (op === "gt") constraints.push(where(key, ">", castValue(val)));
-    else if (op === "lt") constraints.push(where(key, "<", castValue(val)));
+    if (op === "eq") constraints.push(where(key, "==", castValue(key, val)));
+    else if (op === "gte") constraints.push(where(key, ">=", castValue(key, val)));
+    else if (op === "lte") constraints.push(where(key, "<=", castValue(key, val)));
+    else if (op === "gt") constraints.push(where(key, ">", castValue(key, val)));
+    else if (op === "lt") constraints.push(where(key, "<", castValue(key, val)));
     else if (op === "in") {
       const list = val
         .replace(/^\(|\)$/g, "")
         .split(",")
         .filter(Boolean)
-        .map(castValue);
+        .map((x) => castValue(key, x));
       constraints.push(where(key, "in", list.length ? list.slice(0, 30) : ["__ninguno__"]));
     }
   }
 
-  // El orden va después de los where para respetar las reglas de Firestore.
   if (orderField) constraints.push(orderBy(orderField, orderDir));
   if (lim) constraints.push(fbLimit(lim));
   return constraints;
@@ -114,10 +104,6 @@ export async function GET(req: NextRequest) {
     const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     return NextResponse.json(rows);
   } catch (e: any) {
-    // Un error típico acá es que a Firestore le falte un índice compuesto
-    // para esta combinación de filtros. El mensaje de error trae un link
-    // que lo crea con un clic. Lo dejamos pasar en la respuesta para verlo
-    // en la consola del navegador (pestaña Network → /api/db).
     return NextResponse.json({ error: String(e?.message || e) }, { status: 200 });
   }
 }
@@ -135,9 +121,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json([{ id: ref.id, ...finalData }]);
     }
 
-    // PATCH y DELETE en PostgREST actúan sobre "todo lo que matchee el
-    // filtro", así que primero buscamos esos documentos y después actuamos
-    // sobre cada uno (Firestore no tiene un "UPDATE WHERE" directo).
     const constraints = buildConstraints(params);
     const snap = await getDocs(query(collection(db, table), ...constraints));
 
