@@ -18,13 +18,19 @@ export default function TVPage() {
   const cargar = async () => {
     const c = await q(`configuracion_app?select=nombre_app`);
     if (Array.isArray(c) && c.length) setNomApp(c[0].nombre_app);
-    const e = await q(`eventos?select=id,nombre,vehiculos_totales&estado=eq.abierto`);
-    if (Array.isArray(e)) { setEvs(e); if (!evSel && e.length > 0) setEvSel(e[0].id); }
-    const evIds = Array.isArray(e) && e.length ? e.map((x: any) => x.id).join(",") : "";
+    const e = await q(`eventos?select=id,nombre&estado=eq.abierto`);
+    if (Array.isArray(e)) {
+      const withCounts = await Promise.all(e.map(async (x: any) => {
+        const t = await q(`tickets?select=id&id_evento=eq.${x.id}`);
+        return { ...x, vehiculos_totales: Array.isArray(t) ? t.length : 0 };
+      }));
+      setEvs(withCounts);
+      if (!evSel && withCounts.length > 0) setEvSel(withCounts[0].id);
+    }
     const s = await q(`sectores?select=id,nombre,capacidad,color_hex&activo=eq.true&order=orden`);
     if (Array.isArray(s)) {
       const w = await Promise.all(s.map(async (x: any) => {
-        const t = evIds ? await q(`tickets?select=id&id_sector=eq.${x.id}&estado=eq.activo&id_evento=in.(${evIds})`) : [];
+        const t = evSel ? await q(`tickets?select=id&id_sector=eq.${x.id}&estado=eq.activo&id_evento=eq.${evSel}`) : [];
         return { ...x, activos: Array.isArray(t) ? t.length : 0 };
       }));
       setSecs(w);

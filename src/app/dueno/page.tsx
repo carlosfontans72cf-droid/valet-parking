@@ -17,8 +17,12 @@ export default function DuenoPage() {
   const cargar = async () => {
     const c = await api(`configuracion_app?limit=1`);
     if (c.length) setNomApp(c[0].nombre_app || "Valet Parking");
-    const d = await api(`eventos?select=id,nombre,vehiculos_totales,fecha_apertura&estado=eq.abierto&order=fecha_apertura`);
-    setEvs(d);
+    const d = await api(`eventos?select=id,nombre,fecha_apertura&estado=eq.abierto&order=fecha_apertura`);
+    const dConConteo = await Promise.all(d.map(async (ev: any) => {
+      const t = await api(`tickets?select=id&id_evento=eq.${ev.id}`);
+      return { ...ev, vehiculos_totales: Array.isArray(t) ? t.length : 0 };
+    }));
+    setEvs(dConConteo);
     const evIds = d.length ? d.map((e: any) => e.id).join(",") : "";
     if (evIds) {
       setTotal((await api(`tickets?select=id&estado=eq.activo&id_evento=in.(${evIds})`)).length);
