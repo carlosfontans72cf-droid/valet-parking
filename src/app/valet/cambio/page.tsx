@@ -8,6 +8,8 @@ export default function CambioPage() {
   const [t, setT] = useState<any>(null);
   const [s, setS] = useState<any[]>([]);
   const [ns, setNs] = useState("");
+  const [editandoLlave, setEditandoLlave] = useState(false);
+  const [nuevaLlave, setNuevaLlave] = useState("");
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
   const eventoId = typeof window !== 'undefined' ? localStorage.getItem("eventoActivoId") : null;
@@ -39,6 +41,17 @@ export default function CambioPage() {
     } catch { setErr("Error"); }
   };
 
+  const guardarLlave = async () => {
+    if (!t || !nuevaLlave || !valetId) return;
+    try {
+      await act(`tickets?id=eq.${t.id}`, "PATCH", { estado_llave: nuevaLlave });
+      await act(`historial_completo`, "POST", { id_ticket: t.id, id_evento: t.id_evento, id_valet: valetId, tipo: "cambio_llave", detalles: { llave_anterior: t.estado_llave, llave_nueva: nuevaLlave } });
+      setT({ ...t, estado_llave: nuevaLlave });
+      setOk("🔑 Llave actualizada!"); setEditandoLlave(false); setNuevaLlave("");
+      setTimeout(() => setOk(""), 2000);
+    } catch { setErr("Error al guardar llave"); }
+  };
+
   const sa = s.find((x:any) => x.id === t?.id_sector);
 
   return (
@@ -57,8 +70,29 @@ export default function CambioPage() {
             <div className="bg-gray-900 rounded-xl p-3 mt-3 space-y-1 text-sm">
               <p className="text-white">📍 {t.ubicacion_exacta}</p>
               <p style={{color:sa?.color_hex}} className="font-bold">🅿️ {sa?.nombre||"—"}</p>
-              <p className={`font-bold ${t.estado_llave==="con_dueno"?"text-red-400 animate-pulse":"text-gray-400"}`}>🔑 {t.estado_llave==="con_dueno"?"⚠️ LLAVE CON DUEÑO":t.estado_llave==="colgada"?"Colgada":"En cajón"}</p>
+              <div className="flex items-center justify-between">
+                <p className={`font-bold ${t.estado_llave==="con_dueno"?"text-red-400 animate-pulse":"text-gray-400"}`}>🔑 {t.estado_llave==="con_dueno"?"⚠️ LLAVE CON DUEÑO":t.estado_llave==="colgada"?"Colgada":"En cajón"}</p>
+                <button onClick={() => { setEditandoLlave(!editandoLlave); setNuevaLlave(""); }} className="text-xs text-blue-400 underline">
+                  {editandoLlave ? "Cancelar" : "Corregir"}
+                </button>
+              </div>
             </div>
+            {editandoLlave && (
+              <div className="bg-blue-900/40 rounded-2xl p-3 border border-blue-500/40 mt-2">
+                <p className="text-blue-300 text-xs font-semibold mb-2">🔑 Corregir estado de llave</p>
+                <div className="grid grid-cols-3 gap-1.5 mb-2">
+                  {[{ k: "colgada", l: "COLGADA", e: "🔑", c: "bg-blue-600" }, { k: "cajon", l: "CAJÓN", e: "📁", c: "bg-amber-600" }, { k: "con_dueno", l: "DUEÑO", e: "👤", c: "bg-purple-600" }].map(({ k, l, e, c }) => (
+                    <button key={k} onClick={() => setNuevaLlave(k)}
+                      className={`py-3 rounded-xl text-xs font-bold transition-all active:scale-95 ${nuevaLlave === k ? `${c} text-white ring-2 ring-white` : "bg-gray-800 text-gray-300 border border-gray-600"}`}>
+                      <span className="text-2xl block">{e}</span>{l}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={guardarLlave} disabled={!nuevaLlave} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-sm disabled:opacity-40 active:scale-95">
+                  ✅ Guardar llave
+                </button>
+              </div>
+            )}
             {t.hist&&t.hist.length>0&&(
               <div className="mt-2"><p className="text-gray-500 text-xs font-semibold mb-1">📋 Historial:</p>
               {t.hist.map((h:any,i:number)=>(

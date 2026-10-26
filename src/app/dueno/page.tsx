@@ -12,6 +12,9 @@ export default function DuenoPage() {
   const [hist, setHist] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
   const [verRecorrido, setVerRecorrido] = useState(true);
+  // Edición de llave
+  const [editLlaveTicketId, setEditLlaveTicketId] = useState<string | null>(null);
+  const [editLlaveVal, setEditLlaveVal] = useState("");
   const uName = typeof window !== 'undefined' ? localStorage.getItem("userName") || "Dueño" : "";
 
   const cargar = async () => {
@@ -108,6 +111,14 @@ export default function DuenoPage() {
     setMsg("🗑️ " + nom + " limpiado"); setTimeout(() => setMsg(""), 2000); cargar();
   };
 
+  const guardarLlave = async (idTicket: string, nuevaLlave: string) => {
+    if (!nuevaLlave) return;
+    await act(`tickets?id=eq.${idTicket}`, "PATCH", { estado_llave: nuevaLlave });
+    setMsg("🔑 Llave actualizada"); setTimeout(() => setMsg(""), 2000);
+    setEditLlaveTicketId(null); setEditLlaveVal("");
+    cargar();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4" style={{ maxWidth: 640, margin: "0 auto" }}>
       <div className="flex items-center justify-between mb-6">
@@ -121,9 +132,10 @@ export default function DuenoPage() {
         </div>
       </div>
       {msg && <div className="bg-blue-100 text-blue-700 p-3 rounded-xl text-sm mb-4">{msg}</div>}
-      <div className="grid grid-cols-2 gap-2 mb-6">
-        <button onClick={() => window.location.href = "/valet/entrada"} className="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-2xl p-4 text-center shadow-lg"><span className="text-3xl block mb-1">🚗</span><span className="font-semibold">Registrar Entrada</span></button>
-        <button onClick={() => window.location.href = "/dueno/configuracion"} className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-2xl p-4 text-center shadow-lg"><span className="text-3xl block mb-1">🔑</span><span className="font-semibold">Crear Valet</span></button>
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        <button onClick={() => window.location.href = "/dueno/entrada"} className="bg-gradient-to-br from-amber-500 to-amber-700 text-white rounded-2xl p-4 text-center shadow-lg"><span className="text-3xl block mb-1">🚗</span><span className="font-semibold text-sm">Registrar</span><span className="text-xs block opacity-80 mt-0.5">como valet</span></button>
+        <button onClick={() => window.location.href = "/dueno/operaciones"} className="bg-gradient-to-br from-orange-500 to-orange-700 text-white rounded-2xl p-4 text-center shadow-lg"><span className="text-3xl block mb-1">🔄</span><span className="font-semibold text-sm">Operar</span><span className="text-xs block opacity-80 mt-0.5">cambio / entrega</span></button>
+        <button onClick={() => window.location.href = "/dueno/configuracion"} className="bg-gradient-to-br from-purple-600 to-purple-800 text-white rounded-2xl p-4 text-center shadow-lg"><span className="text-3xl block mb-1">🔑</span><span className="font-semibold text-sm">Crear Valet</span></button>
       </div>
       <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="bg-white rounded-2xl shadow p-3 text-center"><p className="text-2xl font-bold text-blue-600">{total}</p><p className="text-xs text-gray-500">Activos</p></div>
@@ -184,6 +196,7 @@ export default function DuenoPage() {
                   </div>
                   <div className="flex gap-1 flex-shrink-0 ml-1">
                     <button onClick={() => wpVehiculo(ticket, sorted)} className="text-green-500 hover:text-green-700 text-lg" title="Compartir por WhatsApp">💬</button>
+                    <button onClick={() => { setEditLlaveTicketId(grupo.idTicket); setEditLlaveVal(""); }} className="text-blue-400 hover:text-blue-600 text-lg" title="Editar llave">🔑</button>
                     <button onClick={() => eliminarVehiculo(ticket, grupo.idTicket)} className="text-red-400 hover:text-red-600 text-lg" title="Eliminar vehículo">🗑️</button>
                   </div>
                 </div>
@@ -197,6 +210,23 @@ export default function DuenoPage() {
                         {h.tipo === "retiro_entregado" && <>⬆️ {h.sectorHasta}</>}
                       </span>
                     ))}
+                  </div>
+                )}
+                {editLlaveTicketId === grupo.idTicket && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                    <p className="text-xs font-semibold text-blue-700 mb-2">🔑 Cambiar estado de llave</p>
+                    <div className="grid grid-cols-3 gap-1.5 mb-2">
+                      {[{ k: "colgada", l: "COLGADA", e: "🔑" }, { k: "cajon", l: "CAJÓN", e: "📁" }, { k: "con_dueno", l: "DUEÑO", e: "👤" }].map(({ k, l, e }) => (
+                        <button key={k} onClick={() => setEditLlaveVal(k)}
+                          className={`py-2 rounded-xl text-xs font-bold transition-all ${editLlaveVal === k ? "bg-blue-600 text-white ring-2 ring-blue-400" : "bg-white text-gray-600 border border-gray-300"}`}>
+                          <span className="text-lg block">{e}</span>{l}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => guardarLlave(grupo.idTicket, editLlaveVal)} disabled={!editLlaveVal} className="flex-1 bg-blue-600 text-white py-2 rounded-xl text-sm font-bold disabled:opacity-40">Guardar</button>
+                      <button onClick={() => { setEditLlaveTicketId(null); setEditLlaveVal(""); }} className="px-4 py-2 rounded-xl text-sm bg-gray-200 text-gray-600">Cancelar</button>
+                    </div>
                   </div>
                 )}
               </div>
