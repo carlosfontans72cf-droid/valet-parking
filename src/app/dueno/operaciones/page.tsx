@@ -28,8 +28,8 @@ export default function DuenoOperacionesPage() {
         if (ev.length) setEvNom(ev[0].nombre);
       }
       // Valets activos
-      const vs = await q(`perfiles?select=id,nombre,numero_valet&rol=eq.valet&activo=eq.true&order=numero_valet`);
-      setValets(vs);
+      const vs = await q(`perfiles?select=id,nombre,numero_valet&rol=eq.valet&activo=eq.true`);
+      setValets(Array.isArray(vs) ? vs.sort((a: any, b: any) => (a.numero_valet || 0) - (b.numero_valet || 0)) : []);
       // Sectores
       const ss = await q(`sectores?select=id,nombre,color_hex,capacidad&activo=eq.true&order=orden`);
       if (ss.length && eventoId) {

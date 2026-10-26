@@ -52,8 +52,8 @@ export default function DuenoEntradaPage() {
     (async () => {
       const evId = await getEventId();
       // Cargar valets activos
-      const vs = await q(`perfiles?select=id,nombre,numero_valet&rol=eq.valet&activo=eq.true&order=numero_valet`);
-      setValets(vs);
+      const vs = await q(`perfiles?select=id,nombre,numero_valet&rol=eq.valet&activo=eq.true`);
+      setValets(Array.isArray(vs) ? vs.sort((a: any, b: any) => (a.numero_valet || 0) - (b.numero_valet || 0)) : []);
       if (!evId) return;
       const d = await q(`sectores?select=id,nombre,capacidad,color_hex&activo=eq.true&order=orden`);
       if (d.length) {
